@@ -1,0 +1,68 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\fadin\\.ohos\\config\\default_apm_demo_thrid_phase_MsQWCDTbRtVLjpk3vnHvHf7MCFQ3voC_vz3nTxQ6N7M=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B830E28A7062BD3EA6FF6B8AAE8F2BD5D71C1C41F5CB8099B155E649AE4E359F0A23D88B78C5F93",
+          "profile": "C:\\Users\\fadin\\.ohos\\config\\default_apm_demo_thrid_phase_MsQWCDTbRtVLjpk3vnHvHf7MCFQ3voC_vz3nTxQ6N7M=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\fadin\\.ohos\\config\\default_apm_demo_thrid_phase_MsQWCDTbRtVLjpk3vnHvHf7MCFQ3voC_vz3nTxQ6N7M=.p12",
+          "storePassword": "0000001B7220F5D43A4EC8E0A1AF674D0CE6BF211296DE98811F698F95DF42BE7F305E6A65596E42875B16"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "5.1.1(19)",
+        "compatibleSdkVersion": "5.0.3(15)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "apm",
+      "srcPath": "./apm",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

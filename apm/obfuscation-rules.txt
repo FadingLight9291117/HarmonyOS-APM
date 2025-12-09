@@ -1,0 +1,165 @@
+# Define project specific obfuscation rules here.
+# You can include the obfuscation configuration files in the current module's build-profile.json5.
+#
+# For more details, see
+#   https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/source-obfuscation-V5
+
+# Obfuscation options:
+# -disable-obfuscation: disable all obfuscations
+# -enable-property-obfuscation: obfuscate the property names
+# -enable-toplevel-obfuscation: obfuscate the names in the global scope
+# -compact: remove unnecessary blank spaces and all line feeds
+# -remove-log: remove all console.* statements
+# -print-namecache: print the name cache that contains the mapping from the old names to new names
+# -apply-namecache: reuse the given cache file
+
+# Keep options:
+# -keep-property-name: specifies property names that you want to keep
+# -keep-global-name: specifies names that you want to keep in the global scope
+
+-enable-property-obfuscation
+-enable-toplevel-obfuscation
+-enable-filename-obfuscation
+-enable-export-obfuscation
+
+# ============================================================
+# 需要保留的名称（类名、接口名、字段名）
+# ============================================================
+-keep-global-name
+# 1. 模块导出的类及其公共方法（通过 Index.ets 导出）
+# ApmStarter 类
+ApmStarter
+start
+init
+
+# APMConfigBuilder 类
+APMConfigBuilder
+create
+setAppType
+setChannel
+setAppVersion
+setKernelVersion
+setBundleName
+setDebug
+setKeys
+setLogBackend
+setDeviceId
+setUserIdFunc
+setCommitRevision
+setBranchName
+setBuildId
+setProductName
+setExtraInfo
+build
+
+# 2. 外部日志接口（setLogBackend 方法参数类型，外部需要实现）
+IKLogAdapter
+d
+i
+e
+w
+
+# 3. 内部服务类构造的 JSON 字段（对象字面量构造的属性名）
+# NetworkService 中的字段: { md5: xxx, name: yyy, ... }
+md5
+name
+size
+type
+type_branch
+encrypt_ver
+extra
+upload_id
+part_size
+part_num
+offset
+content
+
+# ReportService 中的字段: { baseInfo: xxx, busInfo: yyy }
+baseInfo
+busInfo
+
+# ReportService 写入上传标记文件的字段: { analy_type: xxx, time: yyy }
+analy_type
+time
+
+# 日志输出字段（非 debug 级别日志中的对象字段）
+# NetworkService 日志
+zipPath
+fileSize
+name
+
+# ReportService 日志
+cacheDir
+analyType
+cachePath
+path
+
+# CacheScanUploadService 日志
+maxEvents
+skipUploaded
+scanned
+uploaded
+skipped
+failed
+errors
+eventDir
+fileCount
+error
+
+# CacheSaveManager 日志
+dataType
+filePath
+logCount
+logPaths
+
+# CacheCleanupManager 日志
+deletedEvents
+retainedEvents
+freedSpace
+errorCount
+duration
+
+# CacheUseManager 日志
+events
+files
+limit
+includeSize
+returned
+
+# APMCore 日志
+attachments
+reason
+source
+
+# 平台层日志字段
+message
+eventType
+listeners
+
+# 4. 枚举类型（用于数据类型标识和分类）
+AnalyTypeEnum
+Crash
+AppFreeze
+CrashBranchEnum
+JsError
+NativeCrash
+
+# CacheDataType 枚举值
+CacheDataType
+
+# ServerStrategy 策略字段
+strategy
+
+# ============================================================
+# 需要保留的文件（整个文件的类型和字段都会自动保留）
+# ============================================================
+
+# 外部配置类型（APMConfig 通过 APMConfigBuilder 暴露给外部，外部可以直接传对象字面量）
+-keep src/main/ets/kapm/kapm_config/types.ets
+
+# 数据序列化类型（JSON 序列化保存到本地或上传到服务端）
+-keep src/main/ets/kapm/kapm_cache/types/FileInfo.ets
+-keep src/main/ets/kapm/kapm_cache/save/types.ets
+-keep src/main/ets/kapm/types/uploadTypes.ets
+-keep src/main/ets/kapm/types/reportTypes.ets
+-keep src/main/ets/kapm/types/networkTypes.ets
