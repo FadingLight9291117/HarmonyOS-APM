@@ -34,10 +34,38 @@ export async function withTask<T>(name: string, fn: () => T): Promise<T> {
 }
 
 
+const longTaskMap = new Map<string, taskpool.LongTask>();
 
-@Concurrent
-function foo() {
-  console.log('test withTask');
+export async function withLongTask<T>(name: string, fn: () => T): Promise<T> {
+  const logger = getLogger('withLongTask');
+  const start = Date.now();
+  try {
+    const task = new taskpool.LongTask(fn);
+    longTaskMap.set(name, task);
+    const res = await taskpool.execute(task);
+    const end = Date.now();
+    logger.info(`Long Task ${name} completed in ${humanizeDuration(end - start)}`);
+    return res as T;
+  } catch (error) {
+    const end = Date.now();
+    logger.error(`Long Task ${name} failed after ${humanizeDuration(end - start)}:`, error);
+    throw error as Error;
+  }
 }
 
-withTask('', foo)
+export function stopLongTask(name: string): void {
+  const logger = getLogger('withTask');
+  try {
+    const task = longTaskMap.get(name);
+    if (!task) {
+      logger.warn(`No long task found with name ${name}`);
+      return;
+    }
+    taskpool.terminateTask(task);
+    logger.info(`All tasks including ${name} have been stopped.`);
+  } catch (error) {
+    logger.error(`Failed to stop tasks including ${name}:`, error);
+    throw error as Error;
+  }
+}
+

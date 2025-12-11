@@ -1,3 +1,6 @@
+import { testCrash } from 'apm';
+import { withTask } from 'apm';
+
 @Entry
 @Component
 struct Index {
@@ -5,6 +8,10 @@ struct Index {
 
   build() {
     RelativeContainer() {
+
+      TextInput()
+
+
       Text(this.message)
         .id('HelloWorld')
         .fontSize($r('app.float.page_text_font_size'))
@@ -15,9 +22,17 @@ struct Index {
         })
         .onClick(() => {
           this.message = 'Welcome';
+
+          testNativeCrash()
+          // withTask('', testNativeCrash)
         })
     }
     .height('100%')
     .width('100%')
   }
+}
+
+@Concurrent
+function testNativeCrash() {
+  testCrash()
 }

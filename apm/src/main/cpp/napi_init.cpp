@@ -5,6 +5,9 @@ extern "C" {
     napi_value InitCrashHandler(napi_env env, napi_callback_info info);
     napi_value TestCrash(napi_env env, napi_callback_info info);
     napi_value CheckPendingCrash(napi_env env, napi_callback_info info);
+    napi_value CheckCrashNotifyFlag(napi_env env, napi_callback_info info);
+    napi_value SetCallback(napi_env env, napi_callback_info info);
+    napi_value InvokeCallback(napi_env env, napi_callback_info info);
 }
 
 static napi_value Add(napi_env env, napi_callback_info info)
@@ -40,7 +43,10 @@ static napi_value Init(napi_env env, napi_value exports)
         { "add", nullptr, Add, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "initCrashHandler", nullptr, InitCrashHandler, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "testCrash", nullptr, TestCrash, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "checkPendingCrash", nullptr, CheckPendingCrash, nullptr, nullptr, nullptr, napi_default, nullptr }
+        { "checkPendingCrash", nullptr, CheckPendingCrash, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "checkCrashNotifyFlag", nullptr, CheckCrashNotifyFlag, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "setCallback", nullptr, SetCallback, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "invokeCallback", nullptr, InvokeCallback, nullptr, nullptr, nullptr, napi_default, nullptr }
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;

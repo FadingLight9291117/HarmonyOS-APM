@@ -12,4 +12,7 @@ include_directories(${NATIVERENDER_ROOT_PATH}
                     ${NATIVERENDER_ROOT_PATH}/include)
 
 add_library(apm SHARED napi_init.cpp crash_handler.cpp)
-target_link_libraries(apm PUBLIC libace_napi.z.so)
+target_link_libraries(apm PUBLIC
+    libace_napi.z.so
+    libhilog_ndk.z.so
+)

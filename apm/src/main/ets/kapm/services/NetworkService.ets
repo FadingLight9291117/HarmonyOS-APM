@@ -38,7 +38,6 @@ enum API_ENDPOINTS {
 };
 
 
-
 export class NetworkService {
   private TAG = 'NetworkService';
   private log = getLogger('NetworkService');
@@ -77,7 +76,12 @@ export class NetworkService {
   }
 
   async isConnectAvailable(): Promise<boolean> {
-    return await connection.hasDefaultNet()
+    try {
+      return await connection.hasDefaultNet()
+    } catch (error) {
+      this.log.warn('isConnectAvailable:error', error.message);
+      return false;
+    }
   }
 
   /**
@@ -157,14 +161,19 @@ export class NetworkService {
     this.log.info('uploadFile:start', JSON.stringify({ zipPath, name: payload.name }));
     try {
       const fileInfo = await this.prepareFileContent(zipPath);
-      if (!fileInfo.fileContent) throw new Error('file not exist');
+      if (!fileInfo.fileContent) {
+        throw new Error('file not exist');
+      }
       this.log.debug('uploadFile:prepare_done', JSON.stringify(fileInfo));
 
       if (fileInfo.fileSize > this.UPLOAD_LIMIT_MB) {
-        this.log.info('uploadFile:file_too_large', JSON.stringify({ zipPath, fileSize: humanizeBytes(fileInfo.fileSize) }));
-        return await withTiming(`${this.TAG}:uploadFileMultipart`, () => this.uploadFileMultipart(fileInfo, payload, token));
+        this.log.info('uploadFile:file_too_large',
+          JSON.stringify({ zipPath, fileSize: humanizeBytes(fileInfo.fileSize) }));
+        return await withTiming(`${this.TAG}:uploadFileMultipart`,
+          () => this.uploadFileMultipart(fileInfo, payload, token));
       } else {
-        this.log.info('uploadFile:file_size_ok', JSON.stringify({ zipPath, fileSize: humanizeBytes(fileInfo.fileSize) }));
+        this.log.info('uploadFile:file_size_ok',
+          JSON.stringify({ zipPath, fileSize: humanizeBytes(fileInfo.fileSize) }));
         return await withTiming(`${this.TAG}:uploadFileSingle`, () => this.uploadFileSingle(fileInfo, payload, token));
       }
     } catch (e) {
@@ -180,10 +189,14 @@ export class NetworkService {
 
     try {
       const resp = await this.client.get(url, headers, query);
-      if (!resp.ok) throw new HttpError('Ask', resp);
+      if (!resp.ok) {
+        throw new HttpError('Ask', resp);
+      }
 
       const result = resp.json<HttpResponse<AskRespData>>();
-      if (result?.code !== 0) throw new Error(result?.msg || `code ${result?.code}`);
+      if (result?.code !== 0) {
+        throw new Error(result?.msg || `code ${result?.code}`);
+      }
 
       if (result.data?.strategy) {
         this.latestStrategies = ServerStrategy.of(result.data.strategy);
@@ -203,10 +216,14 @@ export class NetworkService {
    * 2. 文件切片并逐片上传 /multipart/upload （带重试）
    * 3. 全部分片成功后调用 /multipart/complete
    */
-  private async uploadFileMultipart(fileInfo: FilePrepareResult, payload: UploadFilePayload, token: string): Promise<UploadResp | null> {
+  private async uploadFileMultipart(fileInfo: FilePrepareResult, payload: UploadFilePayload,
+    token: string): Promise<UploadResp | null> {
     try {
-      if (!fileInfo.fileContent) throw new Error('file not exist');
-      this.log.debug('uploadFileMultipart:start', JSON.stringify({ name: payload.name, size: fileInfo.fileSize, md5: fileInfo.fileMd5 }));
+      if (!fileInfo.fileContent) {
+        throw new Error('file not exist');
+      }
+      this.log.debug('uploadFileMultipart:start',
+        JSON.stringify({ name: payload.name, size: fileInfo.fileSize, md5: fileInfo.fileMd5 }));
 
       const multiPartInfo = await this.createMultipart(fileInfo, payload, token);
       const uploadId = multiPartInfo.upload_id;
@@ -216,7 +233,8 @@ export class NetworkService {
         await this.uploadPartWithRetry(fileInfo, uploadId, p, token);
       }
       const result = await this.completeMultipart(fileInfo, uploadId, token);
-      this.log.debug('uploadFileMultipart:done', JSON.stringify({ uploadId: uploadId, name: payload.name, size: fileInfo.fileSize }));
+      this.log.debug('uploadFileMultipart:done',
+        JSON.stringify({ uploadId: uploadId, name: payload.name, size: fileInfo.fileSize }));
       return result;
     } catch (e) {
       this.log.error(`uploadFileMultipart:error ${e.message}`);
@@ -224,10 +242,13 @@ export class NetworkService {
     }
   }
 
-  private async createMultipart(fileInfo: FilePrepareResult, payload: UploadFilePayload, token: string): Promise<CreateMultiPartResult> {
-    this.log.debug('createMultipart:start', JSON.stringify({ name: payload.name, size: fileInfo.fileSize, md5: fileInfo.fileMd5 }));
+  private async createMultipart(fileInfo: FilePrepareResult, payload: UploadFilePayload,
+    token: string): Promise<CreateMultiPartResult> {
+    this.log.debug('createMultipart:start',
+      JSON.stringify({ name: payload.name, size: fileInfo.fileSize, md5: fileInfo.fileMd5 }));
     const url = this.buildApiUrl(API_ENDPOINTS.MULTIPART_CREATE);
-    const headers: Record<string, string> = this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/json', 'x-m-token': token });
+    const headers: Record<string, string> =
+      this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/json', 'x-m-token': token });
     const body: CreateMultiPartBody = {
       name: payload.name,
       md5: fileInfo.fileMd5,
@@ -237,7 +258,9 @@ export class NetworkService {
       encrypt_ver: payload.encrypt_ver
     };
     const resp = await this.client.post(url, JSON.stringify(body), headers);
-    if (!resp.ok) throw new HttpError('MultipartCreate', resp);
+    if (!resp.ok) {
+      throw new HttpError('MultipartCreate', resp);
+    }
     const obj = resp.json<HttpResponse<CreateMultiPartResult>>();
     if (!obj || obj.code !== 0 || !obj.data || !obj.data.upload_id) {
       throw new Error(obj ? (obj.msg || ('code ' + obj.code)) : 'multipart create failed');
@@ -248,7 +271,9 @@ export class NetworkService {
   }
 
   private async splitFileToParts(fileInfo: FilePrepareResult, partSize: number): Promise<MultiPartInfo[]> {
-    if (!fileInfo.fileContent) throw new Error('file content is null');
+    if (!fileInfo.fileContent) {
+      throw new Error('file content is null');
+    }
     const fileBuf = new Uint8Array(fileInfo.fileContent)
     const totalSize = fileBuf.length;
     const parts: MultiPartInfo[] = [];
@@ -264,13 +289,15 @@ export class NetworkService {
     return parts;
   }
 
-  private async uploadPartWithRetry(fileInfo: FilePrepareResult, uploadId: string, part: MultiPartInfo, token: string): Promise<void> {
+  private async uploadPartWithRetry(fileInfo: FilePrepareResult, uploadId: string, part: MultiPartInfo,
+    token: string): Promise<void> {
     const uploadUrl = this.buildApiUrl(API_ENDPOINTS.MULTIPART_UPLOAD);
     const maxRetries = 3;
     let attempt = 0;
     while (attempt < maxRetries) {
       attempt += 1;
-      this.log.debug('uploadFileMultipart:uploadPart', JSON.stringify({ uploadId: uploadId, part: part.index, attempt }));
+      this.log.debug('uploadFileMultipart:uploadPart',
+        JSON.stringify({ uploadId: uploadId, part: part.index, attempt }));
       const partMd5 = await Crypto.md5(part.buf);
       const query: Record<string, string | number> = {
         "md5": fileInfo.fileMd5,
@@ -280,28 +307,39 @@ export class NetworkService {
         "part_md5": partMd5
       };
       try {
-        const partHeaders: Record<string, string> = this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/zip', 'x-m-token': token });
+        const partHeaders: Record<string, string> =
+          this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/zip', 'x-m-token': token });
         const resp = await this.client.post(uploadUrl, part.buf.buffer, partHeaders, query);
-        if (!resp.ok) throw new HttpError('UploadPart', resp);
+        if (!resp.ok) {
+          throw new HttpError('UploadPart', resp);
+        }
         const obj = resp.json<HttpResponse<null>>();
-        if (!obj || obj.code !== 0) throw new Error(obj ? (obj.msg || ('code ' + obj.code)) : 'part upload failed');
+        if (!obj || obj.code !== 0) {
+          throw new Error(obj ? (obj.msg || ('code ' + obj.code)) : 'part upload failed');
+        }
         this.log.debug('uploadFileMultipart:uploadPartDone', JSON.stringify({ uploadId: uploadId, part: part.index }));
         return;
       } catch (err) {
         this.log.error('uploadFileMultipart:uploadPartRetry', err);
-        if (attempt >= maxRetries) throw err as Error;
+        if (attempt >= maxRetries) {
+          throw err as Error;
+        }
         await this.delay(500 * attempt);
       }
     }
   }
 
-  private async completeMultipart(fileInfo: FilePrepareResult, uploadId: string, token: string): Promise<UploadResp | null> {
+  private async completeMultipart(fileInfo: FilePrepareResult, uploadId: string,
+    token: string): Promise<UploadResp | null> {
     this.log.debug('completeMultipart:start', JSON.stringify({ uploadId: uploadId, md5: fileInfo.fileMd5 }));
     const completeUrl = this.buildApiUrl(API_ENDPOINTS.MULTIPART_COMPLETE);
-    const headers: Record<string, string> = this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/json', 'x-m-token': token });
+    const headers: Record<string, string> =
+      this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/json', 'x-m-token': token });
     const completeBody: MultiPartCompleteBody = { md5: fileInfo.fileMd5, upload_id: uploadId };
     const resp = await this.client.post(completeUrl, JSON.stringify(completeBody), headers);
-    if (!resp.ok) throw new HttpError('MultipartComplete', resp);
+    if (!resp.ok) {
+      throw new HttpError('MultipartComplete', resp);
+    }
     const obj = resp.json<HttpResponse<UploadResp>>();
     if (!obj || obj.code !== 0) {
       throw new Error(obj ? (obj.msg || ('code ' + obj.code)) : 'multipart complete failed');
@@ -313,10 +351,14 @@ export class NetworkService {
   /**
    * 单文件直接上传实现 (内部使用)。
    */
-  private async uploadFileSingle(fileInfo: FilePrepareResult, payload: UploadFilePayload, token: string): Promise<UploadResp | null> {
+  private async uploadFileSingle(fileInfo: FilePrepareResult, payload: UploadFilePayload,
+    token: string): Promise<UploadResp | null> {
     try {
-      if (!fileInfo.fileContent) throw new Error('file not exist');
-      this.log.debug('uploadFileSingle:start', JSON.stringify({ name: payload.name, size: fileInfo.fileSize, md5: fileInfo.fileMd5 }));
+      if (!fileInfo.fileContent) {
+        throw new Error('file not exist');
+      }
+      this.log.debug('uploadFileSingle:start',
+        JSON.stringify({ name: payload.name, size: fileInfo.fileSize, md5: fileInfo.fileMd5 }));
 
       const url = this.buildApiUrl(API_ENDPOINTS.FILE_UPLOAD);
       const headers = this.mergeHeaders(this.clientInfo, { 'Content-Type': 'application/zip', 'x-m-token': token });
@@ -331,10 +373,15 @@ export class NetworkService {
       };
 
       const resp = await this.client.post(url, fileInfo.fileContent, headers, query);
-      if (!resp.ok) throw new HttpError('UploadSingle', resp);
+      if (!resp.ok) {
+        throw new HttpError('UploadSingle', resp);
+      }
       const result = resp.json<HttpResponse<UploadResp>>();
-      if (result?.code !== 0) throw new Error(result?.msg || `code ${result?.code}`);
-      this.log.debug('uploadFileSingle:done', JSON.stringify({ name: payload.name, size: humanizeBytes(fileInfo.fileSize) }));
+      if (result?.code !== 0) {
+        throw new Error(result?.msg || `code ${result?.code}`);
+      }
+      this.log.debug('uploadFileSingle:done',
+        JSON.stringify({ name: payload.name, size: humanizeBytes(fileInfo.fileSize) }));
       return result.data || null;
     } catch (e) {
       this.log.error(`uploadFileSingle:error ${e.message}`);

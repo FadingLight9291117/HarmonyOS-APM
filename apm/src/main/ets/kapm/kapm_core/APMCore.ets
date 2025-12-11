@@ -81,7 +81,7 @@ export class APMCore {
     const instance = new APMCore(context, overrides);
     instance
       .startAppMonitoring()                             // 1. Start AppMonitorService to begin monitoring events
-      .startNativeCrashHandler()                        // 2. Start NativeCrashService to handle native crashes
+      // .startNativeCrashHandler()                        // 2. Start NativeCrashService to handle native crashes
       .startScheduledCleanup()                          // 3. Start scheduled cache cleanup task.
       .then(() => { instance.scanCacheAndUpload() });   // 4. Start initial scan and upload of pending reports.
     instance.startNetConListen();                       // 5. Start Network Connection Listener to trigger uploads on connectivity.

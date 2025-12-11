@@ -1,7 +1,7 @@
 export { Logger, getLogger, setBackend, getBackend } from './log/Logger';
 export { safeFileOperation, safeJsonParse } from './safeOperations';
 export { withTiming } from './withTiming';
-export { withTask } from './withTask';
+export { withTask, withLongTask, stopLongTask } from './withTask';
 export { withRetry, RetryOptions } from './withRetry';
 export { withTimeout, TimeoutError } from './withTimeout';
 export { withResource, withResourceSync, Resource, ResourceOptions } from './withResource';

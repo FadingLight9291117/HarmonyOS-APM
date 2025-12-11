@@ -191,7 +191,7 @@ export default function withUtilsTest() {
       it('should use exponential backoff', 0, async () => {
         const delays: number[] = [];
         let lastTime = Date.now();
-        
+
         try {
           await withRetry('backoff', async () => {
             const now = Date.now();
@@ -209,7 +209,7 @@ export default function withUtilsTest() {
         } catch (error) {
           // 忽略错误，只检查延迟
         }
-        
+
         // 验证延迟时间（允许一些误差）
         if (delays.length >= 1) {
           expect(delays[0]).assertLargerOrEqual(10);
@@ -259,7 +259,7 @@ export default function withUtilsTest() {
       it('should call onRetry callback', 0, async () => {
         let retryCalled = false;
         let attempts = 0;
-        
+
         await withRetry('onRetry', async () => {
           attempts++;
           if (attempts < 2) {
@@ -274,7 +274,7 @@ export default function withUtilsTest() {
             expect(attempt).assertLargerOrEqual(1);
           }
         });
-        
+
         expect(retryCalled).assertTrue();
       });
 
@@ -298,7 +298,7 @@ export default function withUtilsTest() {
       it('should handle custom backoffMultiplier', 0, async () => {
         const delays: number[] = [];
         let lastTime = Date.now();
-        
+
         try {
           await withRetry('customBackoff', async () => {
             const now = Date.now();
@@ -316,7 +316,7 @@ export default function withUtilsTest() {
         } catch (error) {
           // 忽略错误，只检查延迟
         }
-        
+
         // 验证延迟时间（允许一些误差）
         if (delays.length >= 1) {
           expect(delays[0]).assertLargerOrEqual(10);
@@ -404,7 +404,8 @@ export default function withUtilsTest() {
 
       it('should propagate errors from operation', 0, async () => {
         const resource: Resource = {
-          dispose: () => {}
+          dispose: () => {
+          }
         };
 
         try {
@@ -510,7 +511,8 @@ export default function withUtilsTest() {
 
       it('should propagate errors from operation', 0, () => {
         const resource: Resource = {
-          dispose: () => {}
+          dispose: () => {
+          }
         };
 
         try {
@@ -551,7 +553,7 @@ export default function withUtilsTest() {
 
       it('should serialize concurrent operations with same lock', 0, async () => {
         const results: string[] = [];
-        
+
         const promise1 = withLock('serial-lock', async () => {
           await new Promise<void>(resolve => setTimeout(resolve, 50));
           results.push('first');
@@ -566,7 +568,7 @@ export default function withUtilsTest() {
         const GeneratedDestructArray_1 = await Promise.all([promise1, promise2]);
         const result1 = GeneratedDestructArray_1[0];
         const result2 = GeneratedDestructArray_1[1];
-        
+
         expect(result1).assertEqual('first');
         expect(result2).assertEqual('second');
         expect(results[0]).assertEqual('first');
@@ -575,7 +577,7 @@ export default function withUtilsTest() {
 
       it('should allow concurrent operations with different locks', 0, async () => {
         const results: string[] = [];
-        
+
         const promise1 = withLock('lock1', async () => {
           await new Promise<void>(resolve => setTimeout(resolve, 30));
           results.push('lock1');
@@ -590,7 +592,7 @@ export default function withUtilsTest() {
         const GeneratedDestructArray_2 = await Promise.all([promise1, promise2]);
         const result1 = GeneratedDestructArray_2[0];
         const result2 = GeneratedDestructArray_2[1];
-        
+
         expect(result1).assertEqual('lock1');
         expect(result2).assertEqual('lock2');
         // lock2 应该先完成，因为使用不同的锁

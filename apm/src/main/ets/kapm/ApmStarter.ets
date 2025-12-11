@@ -21,6 +21,7 @@ export class ApmStarter {
         buildId: config.buildId,
       }));
       APMCore.init(context, config);
+      this.log.debug("App temp dir: ",context.getApplicationContext().tempDir)
       this.log.debug("Initializing APMCore with config: ", JSON.stringify(config))
     } catch (error) {
       this.log.error('Failed to initialize APMCore:', error);

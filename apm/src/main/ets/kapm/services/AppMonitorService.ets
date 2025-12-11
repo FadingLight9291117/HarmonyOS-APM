@@ -72,7 +72,8 @@ export class AppMonitorService {
         const reportRes = await APMCore.getInstance().reportFile(payload, "AppMonitorService");
         this.log.debug("Report result:", JSON.stringify(reportRes));
       } catch (e) {
-        this.log.error('Error handling event:', e);
+        this.log.error('Error handling event:', e.message);
+        throw e as Error
       }
     };
 

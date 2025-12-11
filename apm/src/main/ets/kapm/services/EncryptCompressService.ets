@@ -47,7 +47,8 @@ class ZipBuilder {
 
   constructor(context: Context, opt: EncryptCompressOptions) {
     this.context = context;
-    this.tempDir = this.fs.join(this.context.getApplicationContext().tempDir, `apm_cache_${Date.now()}`)
+    // this.tempDir = this.fs.join(this.context.getApplicationContext().tempDir, `apm_cache_${Date.now()}`)
+    this.tempDir = this.fs.join("/data/storage/el2/base/temp", `apm_cache_${Date.now()}`)
     this.keyHex = opt.keyHex;
     this.iv = opt.iv;
   }
