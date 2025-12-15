@@ -1,0 +1,11 @@
+{
+  "module": {
+    "name": "native_error_demo_test",
+    "type": "feature",
+    "deviceTypes": [
+      "phone"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false
+  }
+}

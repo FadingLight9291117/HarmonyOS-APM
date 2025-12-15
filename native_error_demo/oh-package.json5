@@ -1,0 +1,12 @@
+{
+  "name": "native_error_demo",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "Index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "packageType": "InterfaceHar",
+  "dependencies": {
+    "libnative_error_demo.so": "file:./src/main/cpp/types/libnative_error_demo"
+  }
+}

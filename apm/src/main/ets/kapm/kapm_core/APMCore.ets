@@ -4,146 +4,161 @@ import { CacheService } from '../services/CacheService';
 import { ReportService, ReportSkippedResult } from '../services/ReportService';
 import { EncryptCompressService } from '../services/EncryptCompressService';
 import { getLogger } from '../utils/log/Logger';
-import { MetricKeys, Monitor } from '../utils/Monitor';
 import { APMConfigManager } from '../kapm_config/APMConfigManager';
-import { BaseInfoData, BusInfoDataType, ReportAttachment, ReportPayload } from '../types/uploadTypes';
+import { ReportPayload } from '../types/uploadTypes';
 import { withTiming } from '../utils';
 import { APMConfig } from '../kapm_config/types';
 import { AppMonitorService } from '../services/AppMonitorService';
 import { CacheScanUploadService } from '../services/CacheScanUploadService';
 import { NativeCrashService } from '../services/NativeCrashService';
 
+// 常量定义
+const DEFAULT_RETRY_INTERVAL = 1000;
+const DEFAULT_MAX_RETRY_COUNT = 3;
+const CLEANUP_DELAY_MS = 3000;
+
 export class APMCore {
-  private readonly TAG = 'APMCore';
-  private readonly log = getLogger(this.TAG);
+  private static readonly TAG = 'APMCore';
+  private readonly log = getLogger(APMCore.TAG);
   private static instance: APMCore | null = null;
-  private static isInitialized: boolean = false;
-  private context: Context;
-  private config: APMConfig;
-  private networkService: NetworkService;
-  private tokenService: TokenService;
-  private cacheService: CacheService;
-  private reportService: ReportService;
-  private appMonitorService: AppMonitorService;
-  private scanUploadService: CacheScanUploadService;
-  private nativeCrashService: NativeCrashService;
-  private monitor: Monitor;
-  // config
-  private disableAutoCleanup: boolean = false;
-  private isScanning: boolean = false;
+  private static isInitialized = false;
+  // Services
+  static config: APMConfig;
+  private readonly networkService: NetworkService;
+  private readonly tokenService: TokenService;
+  private readonly cacheService: CacheService;
+  private readonly reportService: ReportService;
+  private readonly appMonitorService: AppMonitorService;
+  private readonly scanUploadService: CacheScanUploadService;
+  private readonly nativeCrashService: NativeCrashService;
+  // State
+  private readonly disableAutoCleanup: boolean;
+  private isScanning = false;
 
-
-  private constructor(context: Context, overrides: Partial<APMConfig> = {}) {
-    this.context = context;
-    // APMConfigManager now validates config in its constructor
+  private constructor(overrides: Partial<APMConfig> = {}) {
     APMConfigManager.getInstance().setConfig(overrides);
-    this.config = APMConfigManager.getInstance().getConfig();
-    this.networkService = new NetworkService(this.config);
-    this.tokenService = new TokenService(this.config, this.networkService);
-    this.cacheService = new CacheService(this.config);
-    this.monitor = new Monitor();
-    // Initialize encryption service with configured keys
-    const ecService = new EncryptCompressService(this.context, {
-      keyHex: this.config.keys[0],
-      iv: this.config.keys[1]},
-    );
-    // Initialize ReportService with all dependencies
+    APMCore.config = APMConfigManager.getInstance().getConfig();
+
+    // Initialize core services
+    this.networkService = new NetworkService(APMCore.config);
+    this.tokenService = new TokenService(APMCore.config, this.networkService);
+    this.cacheService = new CacheService(APMCore.config);
+
+    // Initialize encryption service
+    const ecService = new EncryptCompressService({
+      keyHex: APMCore.config.keys[0],
+      iv: APMCore.config.keys[1],
+    });
+
+    // Initialize report service
     this.reportService = new ReportService({
       networkService: this.networkService,
       tokenService: this.tokenService,
       ecService: ecService,
-      retryInterval: this.config.retryInterval ?? 1000,
-      maxRetryCount: this.config.maxRetryCount ?? 3,
-      shouldEncrypt: this.config.enableEncryptTransfer,
-      encryptVersion: this.config.encrypt_ver,
+      retryInterval: APMCore.config.retryInterval ?? DEFAULT_RETRY_INTERVAL,
+      maxRetryCount: APMCore.config.maxRetryCount ?? DEFAULT_MAX_RETRY_COUNT,
+      shouldEncrypt: APMCore.config.enableEncryptTransfer,
+      encryptVersion: APMCore.config.encrypt_ver,
     });
+
+    // Initialize monitoring services
     this.appMonitorService = new AppMonitorService(this.cacheService);
     this.nativeCrashService = new NativeCrashService(this.cacheService);
     this.scanUploadService = new CacheScanUploadService({
       cacheService: this.cacheService,
       reportService: this.reportService,
-      config: this.config
+      config: APMCore.config
     });
-    // config
-    this.disableAutoCleanup = this.config.disableAutoCleanup ?? false
 
-    this.log.debug('APMCore initialized with config:', JSON.stringify(this.config));
+    this.disableAutoCleanup = APMCore.config.disableAutoCleanup ?? false;
+
+    this.log.debug('APMCore initialized with config:', JSON.stringify(APMCore.config));
   }
 
   /**
    * Initialize the APMCore singleton with configuration.
+   * @param overrides Optional configuration overrides
+   * @returns Initialized APMCore instance
+   * @throws Error if already initialized
    */
-  static init(context: Context, overrides: Partial<APMConfig> = {}): APMCore {
+  static init(overrides: Partial<APMConfig> = {}): APMCore {
     if (APMCore.isInitialized) {
       throw new Error('APMCore is already initialized. Use APMCore.getInstance() instead.');
     }
-
-    const instance = new APMCore(context, overrides);
-    instance
-      .startAppMonitoring()                             // 1. Start AppMonitorService to begin monitoring events
-      // .startNativeCrashHandler()                        // 2. Start NativeCrashService to handle native crashes
-      .startScheduledCleanup()                          // 3. Start scheduled cache cleanup task.
-      .then(() => { instance.scanCacheAndUpload() });   // 4. Start initial scan and upload of pending reports.
-    instance.startNetConListen();                       // 5. Start Network Connection Listener to trigger uploads on connectivity.
-
-    APMCore.instance = instance;
+    APMCore.instance = new APMCore(overrides);
     APMCore.isInitialized = true;
 
     return APMCore.instance;
   }
 
-  private startNetConListen() {
-    this.log.info("Starting Network Conn Listen Service");
+  /**
+   * Start all background services in the correct order.
+   */
+  startServices(): void {
+    this.startAppMonitoring();
+    this.startNativeCrashHandler();
+    this.startScheduledCleanup().then(() => this.scanCacheAndUpload());
+    this.startNetConListen();
+  }
+
+  private startNetConListen(): void {
+    this.log.info('Starting Network Connection Listener');
     this.networkService.registerNetConnListen(() => {
-      this.log.info("Network is Available");
+      this.log.info('Network is available, triggering cache upload');
       this.scanCacheAndUpload();
     });
-    return this;
   }
 
-  private startAppMonitoring() {
+  private startAppMonitoring(): void {
     this.log.info('Starting App Monitor Service');
-    this.appMonitorService.start(this.context)
-    return this;
+    this.appMonitorService.start();
   }
 
-  private startNativeCrashHandler() {
+  private startNativeCrashHandler(): void {
     this.log.info('Starting Native Crash Handler Service');
     this.nativeCrashService.start();
-    return this;
   }
 
   /**
-   * Start scheduled cache cleanup task.
+   * Start scheduled cache cleanup task after initial delay.
    */
-  private async startScheduledCleanup() {
-    await this.delay(3 * 1000);
-    if (this.disableAutoCleanup) return this; // Skip cleanup if disabled
+  private async startScheduledCleanup(): Promise<void> {
+    await this.delay(CLEANUP_DELAY_MS);
+    if (this.disableAutoCleanup) {
+      this.log.info('Auto cleanup is disabled, skipping scheduled cleanup');
+      return;
+    }
     this.log.info('Starting scheduled cache cleanup task');
     this.cacheService.startScheduledCleanup();
-    return this;
   }
 
   /**
-   * Scan cache and upload cached reports.
+   * Scan cache and upload cached reports when network is available.
    */
-  private async scanCacheAndUpload() {
+  private async scanCacheAndUpload(): Promise<void> {
     if (!await this.networkService.isConnectAvailable()) {
-      this.log.warn('Network not available, skipping scanCacheAndUpload');
-      return this
+      this.log.warn('Network not available, skipping cache scan and upload');
+      return;
     }
-    if (this.isScanning) return
-    this.isScanning = true
+
+    if (this.isScanning) {
+      this.log.debug('Cache scan already in progress, skipping');
+      return;
+    }
+
+    this.isScanning = true;
     this.log.info('Starting cache scan and upload of pending reports');
+
     try {
       await this.cacheService.waitForIdle();
-      await withTiming(`${this.TAG}:scanCacheAndUpload`, () => this.scanUploadService.scanAndUpload());
+      await withTiming(`${APMCore.TAG}:scanCacheAndUpload`, () =>
+      this.scanUploadService.scanAndUpload()
+      );
     } catch (error) {
       this.log.error('Error during cache scan and upload', error);
     } finally {
       this.isScanning = false;
     }
-    return this;
   }
 
   /**
@@ -178,91 +193,85 @@ export class APMCore {
   }
 
   /**
-   * Ensure the instance is initialized before calling instance methods.
-   * @throws Error if not initialized
-   */
-  private ensureInitialized(): void {
-    if (!APMCore.isInitialized) {
-      throw new Error('APMCore is not initialized. Call APMCore.init() first.');
-    }
-  }
-
-  /**
    * Report data with file attachments as a ZIP package.
-   * @returns Upload result or throws error
+   * This method creates its own services internally for use in Task environment.
+   * @param payload Report payload containing base info, business data and attachments
+   * @param source Source identifier for logging purposes
+   * @returns Upload result indicating success/failure
    */
-  async reportFile(payload: ReportPayload, source: string): Promise<ReportSkippedResult> {
-    if (!await this.networkService.isConnectAvailable()) {
-      this.monitor.inc(MetricKeys.ReportFailed);
-      this.log.warn('File upload failed', JSON.stringify({
-        analyType: payload.bus._analy_type,
-        attachments: payload.attachments?.length || 0,
-        reason: 'Network not available',
-        source,
-      }));
-      return {
-        success: false,
-        skipped: true,
-        reason: 'Network not available'
-      };
+  static async reportFile(payload: ReportPayload, source: string): Promise<ReportSkippedResult> {
+    const config = APMCore.config;
+    if (!config) {
+      throw new Error('APMCore.config is not set. Call APMCore.init() first.');
     }
-    return withTiming(`${this.TAG}:reportFile`, async () => {
-      this.ensureInitialized();
-      const base: BaseInfoData = payload.base
-      const bus: BusInfoDataType = payload.bus
-      const cacheDir: string = payload.cacheDir
-      const extra: Record<string, string | number | boolean> | undefined = payload.extra
-      const attachments: ReportAttachment[] | undefined = payload.attachments
+    const log = getLogger(APMCore.TAG);
+    const analyType: number = payload.bus._analy_type;
+    const attachmentCount: number = payload.attachments?.length ?? 0;
 
-      // wait for any cache clean operations to complete, if cache cleanup is ongoing
-      await this.cacheService.waitForIdle();
-      this.monitor.inc(MetricKeys.ReportTotal);
+    // Create services for Task environment
+    const networkService = new NetworkService(config);
+    const tokenService = new TokenService(config, networkService);
+    const ecService = new EncryptCompressService({
+      keyHex: config.keys[0],
+      iv: config.keys[1],
+    });
+    const reportService = new ReportService({
+      networkService: networkService,
+      tokenService: tokenService,
+      ecService: ecService,
+      retryInterval: config.retryInterval ?? DEFAULT_RETRY_INTERVAL,
+      maxRetryCount: config.maxRetryCount ?? DEFAULT_MAX_RETRY_COUNT,
+      shouldEncrypt: config.enableEncryptTransfer,
+      encryptVersion: config.encrypt_ver,
+    });
 
+    // Check network availability first
+    if (!await networkService.isConnectAvailable()) {
+      log.warn('File upload skipped - network unavailable', JSON.stringify({
+        analyType: analyType,
+        attachments: attachmentCount,
+        source: source,
+      }));
+      return { success: false, skipped: true, reason: 'Network not available' };
+    }
+
+    return withTiming(`${APMCore.TAG}:reportFile`, async () => {
       try {
-        this.log.debug('Building payoad with attachments', JSON.stringify({
-          analyType: bus._analy_type,
-          attachmentCount: attachments?.length || 0
+        log.debug('Building payload with attachments', JSON.stringify({
+          analyType: analyType,
+          attachmentCount: attachmentCount,
         }));
 
-        // Build payload using ReportService
-        // buildPayload signature: (base, bus, cacheDir, extra, attachments)
-        const payload = this.reportService.buildPayload(base, bus, cacheDir, extra, attachments);
-
-        // ReportService now handles retry and token invalidation
-        const reportResult = await this.reportService.reportZip(payload);
+        const builtPayload = reportService.buildPayload(
+          payload.base,
+          payload.bus,
+          payload.cacheDir,
+          payload.extra,
+          payload.attachments
+        );
+        const reportResult = await reportService.reportZip(builtPayload);
 
         if (reportResult.success) {
-          this.monitor.inc(MetricKeys.ReportSuccess);
-          this.log.info('File upload success', JSON.stringify({
-            analyType: bus._analy_type,
-            attachments: attachments?.length || 0,
+          log.info('File upload success', JSON.stringify({
+            analyType: analyType,
+            attachments: attachmentCount,
             reason: reportResult.reason,
-            source,
-          }));
+            source: source,
+          }))
         } else {
-          this.monitor.inc(MetricKeys.ReportFailed);
-          this.log.error('File upload failed', JSON.stringify({
-            analyType: bus._analy_type,
-            attachments: attachments?.length || 0,
+          log.error('File upload failed', JSON.stringify({
+            analyType: analyType,
+            attachments: attachmentCount,
             reason: reportResult.reason,
-            source,
-          }));
+            source: source,
+          }))
         }
-
         return reportResult;
       } catch (err) {
-        this.monitor.inc(MetricKeys.ReportFailed);
-        this.log.error('File upload failed', err.message || err);
+        log.error('File upload failed with exception', err.message);
         throw err as Error;
       }
     });
-  }
-
-  /**
-   * Get current metrics snapshot.
-   */
-  getMetrics() {
-    return this.monitor.get();
   }
 
   private delay(ms: number): Promise<void> {

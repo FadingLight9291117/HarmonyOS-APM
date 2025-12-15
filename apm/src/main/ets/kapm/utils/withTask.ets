@@ -36,11 +36,11 @@ export async function withTask<T>(name: string, fn: () => T): Promise<T> {
 
 const longTaskMap = new Map<string, taskpool.LongTask>();
 
-export async function withLongTask<T>(name: string, fn: () => T): Promise<T> {
+export async function withLongTask<T, A extends object[]>(name: string, fn: (...args: A) => T, ...args: A): Promise<T> {
   const logger = getLogger('withLongTask');
   const start = Date.now();
   try {
-    const task = new taskpool.LongTask(fn);
+    const task = new taskpool.LongTask(fn, ...args);
     longTaskMap.set(name, task);
     const res = await taskpool.execute(task);
     const end = Date.now();
@@ -48,13 +48,30 @@ export async function withLongTask<T>(name: string, fn: () => T): Promise<T> {
     return res as T;
   } catch (error) {
     const end = Date.now();
-    logger.error(`Long Task ${name} failed after ${humanizeDuration(end - start)}:`, error);
+    logger.error(`Long Task ${name} failed after ${humanizeDuration(end - start)}:`, error.message);
     throw error as Error;
   }
 }
 
+// export async function withLongTask<T>(name: string, fn: () => T): Promise<T> {
+//   const logger = getLogger('withLongTask');
+//   const start = Date.now();
+//   try {
+//     const task = new taskpool.LongTask(fn);
+//     longTaskMap.set(name, task);
+//     const res = await taskpool.execute(task);
+//     const end = Date.now();
+//     logger.info(`Long Task ${name} completed in ${humanizeDuration(end - start)}`);
+//     return res as T;
+//   } catch (error) {
+//     const end = Date.now();
+//     logger.error(`Long Task ${name} failed after ${humanizeDuration(end - start)}:`, error);
+//     throw error as Error;
+//   }
+// }
+
 export function stopLongTask(name: string): void {
-  const logger = getLogger('withTask');
+  const logger = getLogger('withLongTask');
   try {
     const task = longTaskMap.get(name);
     if (!task) {
@@ -68,4 +85,3 @@ export function stopLongTask(name: string): void {
     throw error as Error;
   }
 }
-

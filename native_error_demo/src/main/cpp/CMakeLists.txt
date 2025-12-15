@@ -11,13 +11,5 @@ endif()
 include_directories(${NATIVERENDER_ROOT_PATH}
                     ${NATIVERENDER_ROOT_PATH}/include)
 
-add_library(apm SHARED 
-    napi_init.cpp 
-    signal_handler.cpp 
-    crash_napi.cpp
-)
-target_link_libraries(apm PUBLIC
-    libace_napi.z.so
-    libhilog_ndk.z.so
-    libohcommonevent.so
-)
+add_library(native_error_demo SHARED napi_init.cpp)
+target_link_libraries(native_error_demo PUBLIC libace_napi.z.so)

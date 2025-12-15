@@ -6,27 +6,27 @@ import { getLogger, safeFileOperation } from '../utils';
 
 interface EncryptCompressOptions {
   keyHex: string;
-  iv: string
+  iv: string;
+  tempDir?: string;
 }
 
 export class EncryptCompressService {
   private readonly TAG = 'EncryptCompressService';
   private readonly log = getLogger(this.TAG);
-  private fs = getFileSystem();
   private keyHex: string;
   private iv: string;
+  private tempDir?: string;
   static instance: EncryptCompressService | null;
-  private context: Context;
 
-  constructor(context: Context, options: EncryptCompressOptions) {
-    this.context = context;
+  constructor(options: EncryptCompressOptions) {
     const cfg = options;
     this.keyHex = cfg.keyHex;
     this.iv = cfg.iv;
+    this.tempDir = cfg.tempDir
   }
 
   createZipBuilder(): ZipBuilder {
-    return new ZipBuilder(this.context, { keyHex: this.keyHex, iv: this.iv });
+    return new ZipBuilder({ keyHex: this.keyHex, iv: this.iv, tempDir: this.tempDir });
   }
 
   hasKeyMaterial(): boolean {
@@ -42,13 +42,11 @@ class ZipBuilder {
   private iv: string;
   private cacheFiles: ZipItem[] = [];
   private inlineBuffers: Map<string, Uint8Array> = new Map();
-  private context: Context;
   private tempDir: string;
 
-  constructor(context: Context, opt: EncryptCompressOptions) {
-    this.context = context;
-    // this.tempDir = this.fs.join(this.context.getApplicationContext().tempDir, `apm_cache_${Date.now()}`)
-    this.tempDir = this.fs.join("/data/storage/el2/base/temp", `apm_cache_${Date.now()}`)
+  constructor(opt: EncryptCompressOptions) {
+    const baseTempDir = opt.tempDir ?? '/data/storage/el2/base/temp';
+    this.tempDir = this.fs.join(baseTempDir, `apm_zip_${Date.now()}`);
     this.keyHex = opt.keyHex;
     this.iv = opt.iv;
   }

@@ -6,7 +6,8 @@
   "author": "",
   "license": "",
   "dependencies": {
-    'apm': "file:../apm"
+    'apm': "file:../apm",
+    "native_error_demo": "file:../native_error_demo",
   }
 }
 

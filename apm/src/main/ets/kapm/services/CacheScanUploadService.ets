@@ -129,7 +129,7 @@ export class CacheScanUploadService {
       // Build and upload payload
       const eventDir = this.getEventDirectory(event);
       const payload = await this.buildPayload(event, eventDir);
-      const result = await APMCore.getInstance().reportFile(payload, "ScanUploadService");
+      const result = await APMCore.reportFile(payload, "ScanUploadService");
 
       if (result.success) {
         this.logUploaded(event);

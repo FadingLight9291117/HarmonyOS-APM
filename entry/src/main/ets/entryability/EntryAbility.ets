@@ -16,12 +16,11 @@ export default class EntryAbility extends UIAbility {
       const config = APMConfigBuilder.create(context, false)
         .setKeys('N4%mqz8M4ssbBBg$Y#AmZcTA7*Zb2G$x', 'mjZZxxVE24N&D#TD')
         .setDebug(true)
-        .setAppVersion(BuildProfile.VERSION_NAME)
-        .setChannel('apm-test')
+        .setAppVersion('1.10.0-apm-dev')
         .setProductName(BuildProfile.PRODUCT_NAME)
         .build()
 
-      ApmStarter.start(context, config)
+      ApmStarter.start(config)
 
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));

@@ -63,6 +63,18 @@
           ]
         }
       ]
+    },
+    {
+      "name": "native_error_demo",
+      "srcPath": "./native_error_demo",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
     }
   ]
 }

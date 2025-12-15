@@ -173,3 +173,5 @@ class OSFileSystem implements FileSystem {
 let activeFS: FileSystem = new OSFileSystem();
 export const getFileSystem = () => activeFS;
 export const setFileSystem = (fsImpl: FileSystem) => { activeFS = fsImpl; };
+
+export const fs = getFileSystem()

@@ -8,12 +8,6 @@ import { getLogger } from "../../../../utils/log/Logger";
  */
 export class EventsMonitor extends SystemEventMonitor {
   private log = getLogger('CrashMonitor')
-  context: Context | undefined = undefined
-
-  constructor(ctx: Context) {
-    super()
-    this.context = ctx
-  }
 
   watcherName(): string {
     return "wps_app_events_watcher"

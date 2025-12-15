@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import testNapi from 'libapm.so';
+import testNapi from 'libnative_error_demo.so';
 
 const DOMAIN = 0x0000;
 
@@ -16,6 +16,7 @@ struct Index {
           .fontWeight(FontWeight.Bold)
           .onClick(() => {
             this.message = 'Welcome';
+            hilog.info(DOMAIN, 'testTag', 'Test NAPI 2 + 3 = %{public}d', testNapi.add(2, 3));
           })
       }
       .width('100%')

@@ -1,10 +1,6 @@
 import { getLogger, withTask } from "../utils";
-import { APMCore } from "../kapm_core/APMCore";
 import { CacheService } from "./CacheService";
-import { EventInfoParams, ExceptionInfo, ThreadInfo } from "../kapm_cache/save/types";
-import { APMConfigManager } from "../kapm_config/APMConfigManager";
-import { FileSystem, getFileSystem } from "../platform/FileSystem";
-import { safeJsonParse } from "../utils/safeOperations";
+import { fs } from "../platform/FileSystem";
 import testNapi from 'libapm.so';
 
 /**
@@ -47,8 +43,7 @@ export class NativeCrashService {
   private readonly TAG = 'NativeCrashService';
   private readonly log = getLogger(this.TAG);
   private cacheService: CacheService;
-  private fs: FileSystem = getFileSystem();
-  private checkInterval: number = 500; // 50ms检查一次（快速检测崩溃，实现实时检测）
+  private checkInterval: number = 50; // 50ms检查一次（快速检测崩溃，实现实时检测）
   private timerId: number | null = null;
   private isProcessing: boolean = false;
   private crashCallback: CrashCallback = () => {
@@ -83,18 +78,18 @@ export class NativeCrashService {
         // 可以在这里执行任何 ArkTS 逻辑
       });
 
-
-      testNapi.initCrashHandler();
-      this.log.info('Native crash handler initialized');
+      const cacheDir = this.cacheService.getCacheDir();
+      testNapi.initCrashHandler(cacheDir, 3);
+      this.log.info('Native crash handler initialized with cache dir:', cacheDir);
     } catch (e) {
       this.log.error('Failed to initialize native crash handler', e.message);
     }
 
     // 启动时立即检查是否有上次崩溃遗留的文件
-    this.checkAndProcessCrash();
+    // this.checkAndProcessCrash();
 
     // 启动文件轮询检查
-    this.startPolling();
+    // this.startPolling();
   }
 
   /**
@@ -128,10 +123,10 @@ export class NativeCrashService {
     try {
       // 方式1：检查实时崩溃通知标志（优先级高，实时性好）
       // 注意：基于内存变量，只在当前进程运行期间有效，重启后会丢失
-      const hasNotify = testNapi.checkCrashNotifyFlag();
-      this.log.debug("Checking crash notify flag: " + hasNotify);
-      if (hasNotify) {
-        this.log.info('Crash notification detected via signal flag (real-time)');
+      const notifyResult = testNapi.checkCrashState();
+      this.log.debug("Checking crash notify flag: " + JSON.stringify(notifyResult));
+      if (notifyResult.detected) {
+        this.log.info(`Crash notification detected via signal flag (real-time). Name: ${notifyResult.crashName}, Reason: ${notifyResult.crashReason}`);
         // 从文件标志中获取崩溃文件路径
         const crashFilePath: string | null = testNapi.checkPendingCrash();
         if (crashFilePath && crashFilePath.length > 0) {
@@ -184,7 +179,7 @@ export class NativeCrashService {
   // private async processCrashFile(crashFilePath: string) {
   //   try {
   //     // 读取崩溃文件
-  //     const crashContent = await this.fs.readFile(crashFilePath);
+  //     const crashContent = await fs.readFile(crashFilePath);
   //     const crashData: ESObject = safeJsonParse<ESObject>(crashContent);
   //     if (!crashData) {
   //       this.log.error('Failed to parse crash file', crashFilePath);
@@ -230,7 +225,7 @@ export class NativeCrashService {
   //
   //     // 删除崩溃文件
   //     try {
-  //       await this.fs.unlink(crashFilePath);
+  //       await fs.unlink(crashFilePath);
   //       this.log.debug(`Deleted crash file: ${crashFilePath}`);
   //     } catch (err) {
   //       this.log.warn(`Failed to delete crash file: ${crashFilePath}`, err.message);

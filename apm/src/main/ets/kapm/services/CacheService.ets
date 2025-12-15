@@ -12,6 +12,7 @@ import { CrashBranchEnum, ReportAttachment, ReportPayload } from '../types/uploa
 import { CacheConfig } from '../kapm_cache/config/types';
 import { ReportPayloadBuilder } from '../types/reportPayloadBuilders';
 import { EventInfoParams } from '../kapm_cache/save/types';
+import { checkCrashState } from 'libapm.so';
 
 export enum CacheDataType {
   JsError = 'jsError',
@@ -22,18 +23,15 @@ export enum CacheDataType {
 export class CacheService {
   private readonly TAG = 'CacheService';
   private readonly log = getLogger(this.TAG);
-  private fs: FileSystem;
+  private fs: FileSystem = getFileSystem();
   private cleanupManager: CacheCleanupManager;
   private useManager: CacheUseManager;
   private scheduler: CleanupScheduler;
-  private config: APMConfig;
   private cacheConfig: CacheConfig;
   private saveManager: CacheSaveManager;
   private payloadBuilder: ReportPayloadBuilder;
 
-  constructor(config: APMConfig, fsImpl?: FileSystem) {
-    this.fs = fsImpl || getFileSystem();
-    this.config = config;
+  constructor(config: APMConfig) {
     // Initialize integrated managers pointing at same cache directory (bridge from APMConfig)
     // Use CacheConfigManager for validation and config merging
     const configManager = new CacheConfigManager(config);
@@ -45,6 +43,10 @@ export class CacheService {
     this.payloadBuilder = new ReportPayloadBuilder(config);
   }
 
+  getCacheDir(): string {
+    return this.cacheConfig.cacheDir;
+  }
+
   /**
    * 保存报告载荷到缓存
    * @param options 缓存保存选项
@@ -53,7 +55,7 @@ export class CacheService {
   async saveToCache(options: CacheSaveOptions): Promise<ReportPayload> {
     try {
       return withTiming(`${this.TAG}:saveToCache`, async () => {
-        this.useManager.reset();  // 重置 UseManager 索引，确保新保存的事件可见
+        this.useManager.reset(); // 重置 UseManager 索引，确保新保存的事件可见
         switch (options.dataType) {
           case CacheDataType.JsError:
             return this.saveCrashReport(CacheDataType.JsError, options.eventInfo, options.uploadInfo, options.extra);
@@ -114,6 +116,9 @@ export class CacheService {
       extra,
     });
 
+    const nativeCrashStateResult = checkCrashState();
+    this.log.warn("Native crash state:", JSON.stringify(nativeCrashStateResult));
+
     // 使用 ReportPayloadBuilder 构建 payload
     this.payloadBuilder
       .buildBaseInfo(uploadInfo)
@@ -121,8 +126,8 @@ export class CacheService {
         eventTimestamp, {
           fingerprint: eventInfo.uuid,
           crash_type: dataType,
-          crash_name: eventInfo.exception?.name || 'Unknown Error',
-          crash_reason: eventInfo.exception?.message || 'Unknown reason'
+          crash_name: nativeCrashStateResult.crashName || eventInfo.exception?.name || 'Unknown error',
+          crash_reason: nativeCrashStateResult.crashReason || eventInfo.exception?.message || 'Unknown reason'
         })
 
     return this.buildPayloadWithAttachments(uploadInfo, saveResult, extra);

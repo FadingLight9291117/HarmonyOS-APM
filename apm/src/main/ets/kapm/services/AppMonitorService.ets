@@ -8,6 +8,7 @@ import { APMConfigManager } from "../kapm_config/APMConfigManager";
 import { APMCore } from "../kapm_core/APMCore";
 import { FileSystem, getFileSystem } from "../platform/FileSystem";
 import { EventsMonitor } from "../kapm_data_collection/event/system/crash/EventsMonitor";
+import { notifyCrashHandled } from "libapm.so";
 
 const HIAPPEVENT_LOGPATH = "/data/storage/el2/log/hiappevent/"
 
@@ -24,9 +25,9 @@ export class AppMonitorService {
     this.monitor = new ApmEventMonitorBuilder();
   }
 
-  start(context: Context) {
+  start() {
     this.log.info('start')
-    const eventsMonitor = new EventsMonitor(context)
+    const eventsMonitor = new EventsMonitor()
     // 启动服务的代码
     this.monitor
       .append(eventsMonitor)  // 崩溃
@@ -41,7 +42,7 @@ export class AppMonitorService {
 
     const listener = async (eventType: EventType, eventInfo: hiAppEvent.AppEventInfo) => {
       try {
-        this.log.info(`Received event: ${eventType}, time: ${eventInfo.params['time']}`);
+        this.log.warn(`Received event: ${eventType}, time: ${eventInfo.params['time']}`);
         // 处理接收到的事件
 
         // 1. 保存到缓存
@@ -69,11 +70,16 @@ export class AppMonitorService {
         this.deleteOriginalLogFiles(eventInfoObj);
 
         // 2. 上传
-        const reportRes = await APMCore.getInstance().reportFile(payload, "AppMonitorService");
+        const reportRes = await APMCore.reportFile(payload, "AppMonitorService");
+
         this.log.debug("Report result:", JSON.stringify(reportRes));
       } catch (e) {
         this.log.error('Error handling event:', e.message);
         throw e as Error
+      } finally {
+        if (eventType === EventType.NATIVE_CRASH) {
+          notifyCrashHandled(); // 通知Native崩溃已处理
+        }
       }
     };
 
@@ -101,3 +107,4 @@ export class AppMonitorService {
     }
   }
 }
+
