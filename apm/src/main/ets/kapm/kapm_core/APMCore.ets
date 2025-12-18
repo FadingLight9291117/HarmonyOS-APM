@@ -94,19 +94,25 @@ export class APMCore {
   /**
    * Start all background services in the correct order.
    */
-  startServices(): void {
-    this.startAppMonitoring();
-    this.startNativeCrashHandler();
+  startCacheServices(): APMCore {
     this.startScheduledCleanup().then(() => this.scanCacheAndUpload());
-    this.startNetConListen();
+    return this;
   }
 
-  private startNetConListen(): void {
+  startMonitorServices(): APMCore {
+    this.log.info('Starting Thread Services');
+    this.startAppMonitoring();
+    this.startNativeCrashHandler();
+    return this;
+  }
+
+  startNetConService(): APMCore{
     this.log.info('Starting Network Connection Listener');
     this.networkService.registerNetConnListen(() => {
       this.log.info('Network is available, triggering cache upload');
       this.scanCacheAndUpload();
     });
+    return this;
   }
 
   private startAppMonitoring(): void {
@@ -278,3 +284,4 @@ export class APMCore {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
+

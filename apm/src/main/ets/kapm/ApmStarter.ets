@@ -18,19 +18,27 @@ export class ApmStarter {
   private init(config: Partial<APMConfig>): void {
     this.log.info("Initializing APMCore", JSON.stringify({ isDebug: config.isDebug, buildId: config.buildId }));
 
-    withLongTask('startServices', startServices, config)
-      .catch((err: Error) => {
-        this.log.error('Error startServices:', err.message);
+    try {
+      APMCore.init(config)
+        .startCacheServices()
+        .startNetConService()
 
-        setTimeout(() => {
-          AlertDialog.show({
-            message: "Failed to start APM services: " + err.message,
+      withLongTask('ApmThreadServices', startMonitorServices, config)
+        .catch((err: Error) => {
+          this.log.error('Error ApmThreadServices:', err.message);
+
+          setTimeout(() => {
+            AlertDialog.show({
+              message: "Failed to start APM thread services: " + err.message,
+            })
           })
-        })
+        });
 
-      });
+      this.registeredJsErrorObserver(config);
 
-    this.registeredJsErrorObserver(config);
+    } catch (error) {
+      this.log.error('Error initializing APMCore:', error.message, error.stack);
+    }
   }
 
   static stop(): void {
@@ -42,8 +50,9 @@ export class ApmStarter {
       const observer: errorManager.ErrorObserver = {
         onUnhandledException: (errorMsg) => {
           this.log.error(this.TAG, 'onUnhandledException, errorMsg: ' + errorMsg);
-          // if (config.isDebug) this.showFaultDialog(errorMsg);
-          if (config.isDebug) this.showFaultDialog(errorMsg);
+          if (config.isDebug) {
+            this.showFaultDialog(errorMsg);
+          }
         }
       }
       errorManager.on("error", observer);
@@ -54,7 +63,9 @@ export class ApmStarter {
   private faultDialogShown = false
 
   private showFaultDialog(fault: string) {
-    if (this.faultDialogShown) return;
+    if (this.faultDialogShown) {
+      return;
+    }
 
     this.faultDialogShown = true;
     setTimeout(() => {
@@ -72,12 +83,7 @@ export class ApmStarter {
 }
 
 @Concurrent
-function startServices(config: Partial<APMConfig>) {
-  APMCore.init(config).startServices()
-  // ✅ 使用定时器保持事件循环活跃
-  setInterval(() => {
-    // 周期性任务
-    console.log('LongTask keep-alive');
-  }, 1000);
-
+function startMonitorServices(config: Partial<APMConfig>) {
+  getLogger('ApmStarter').info('Starting APMCore Thread Services');
+  APMCore.init(config).startMonitorServices()
 }
