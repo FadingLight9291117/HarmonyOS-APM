@@ -107,7 +107,7 @@ export class APMConfigBuilder {
    * 设置日志后端（可选，用于自定义日志输出）
    * @param logBackend 实现 LogBackend 接口的日志实现
    */
-  setLogBackend<T extends IKLogAdapter>(logBackend: T): APMConfigBuilder {
+  setLogBackend(logBackend: IKLogAdapter): APMConfigBuilder {
     this.config.logBackend = new KLogAdapter(logBackend)
     return this;
   }

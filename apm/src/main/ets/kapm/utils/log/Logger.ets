@@ -58,10 +58,10 @@ export const getLogger = (tag?: string) => LoggerImpl.getLogger(tag);
 
 
 export interface IKLogAdapter {
-  d(tag: string, msg: string): void
-  i(tag: string, msg: string): void
-  e(tag: string, msg: string): void
-  w(tag: string, msg: string): void
+  d: (tag: string, msg: string) => void
+  i: (tag: string, msg: string) => void
+  e: (tag: string, msg: string) => void
+  w: (tag: string, msg: string) => void
 }
 
 export class KLogAdapter<T extends IKLogAdapter> implements LogBackend {

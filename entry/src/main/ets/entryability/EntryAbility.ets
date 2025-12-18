@@ -18,9 +18,13 @@ export default class EntryAbility extends UIAbility {
         .setDebug(true)
         .setAppVersion('1.10.0-apm-dev')
         .setProductName(BuildProfile.PRODUCT_NAME)
+        .setUserIdFunc(() => {
+          console.log('EntryAbility', "get user id called")
+          return "test_user_id"
+        })
         .build()
 
-      ApmStarter.start(config)
+      ApmStarter.start(this.context, config)
 
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));

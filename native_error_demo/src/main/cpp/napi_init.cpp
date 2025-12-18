@@ -60,23 +60,31 @@ static napi_value CrashAbort(napi_env env, napi_callback_info info) {
 
 /**
  * 触发 SIGFPE（浮点异常）- 整数除以零
+ * 注意：ARM 架构下整数除以零通常不会触发硬件异常（结果为0），
+ * 为了演示 SIGFPE，这里手动触发信号。
  */
 static napi_value CrashDivideByZero(napi_env env, napi_callback_info info) {
-    volatile int a = 1;
-    volatile int b = 0;
-    volatile int c = a / b;  // 整数除以零，触发 SIGFPE
-    (void)c;
+    // volatile int a = 1;
+    // volatile int b = 0;
+    // volatile int c = a / b;  // ARM 上这通常不会崩溃
+    // (void)c;
+    
+    raise(SIGFPE); // 手动触发 SIGFPE
     return nullptr;
 }
 
 /**
  * 触发 SIGBUS（总线错误）- 未对齐的内存访问
+ * 注意：现代 ARM 架构通常支持非对齐访问，不会触发 SIGBUS。
+ * 这里手动触发信号以演示。
  */
 static napi_value CrashBusError(napi_env env, napi_callback_info info) {
-    char* buffer = (char*)malloc(sizeof(int) + 1);
-    int* misaligned = (int*)(buffer + 1);  // 未对齐的地址
-    *misaligned = 42;  // 可能触发 SIGBUS（取决于平台）
-    free(buffer);
+    // char* buffer = (char*)malloc(sizeof(int) + 1);
+    // int* misaligned = (int*)(buffer + 1);
+    // *misaligned = 42;
+    // free(buffer);
+    
+    raise(SIGBUS); // 手动触发 SIGBUS
     return nullptr;
 }
 
@@ -148,11 +156,15 @@ static napi_value CrashDoubleFree(napi_env env, napi_callback_info info) {
 
 /**
  * 释放后使用（Use After Free）
+ * 注意：UAF 通常不会立即导致崩溃（除非开启 ASan），而是导致数据损坏。
+ * 这里手动触发 SIGSEGV 来模拟“踩坏内存导致崩溃”的后果。
  */
 static napi_value CrashUseAfterFree(napi_env env, napi_callback_info info) {
     char* buffer = (char*)malloc(100);
     free(buffer);
-    memset(buffer, 'A', 100);  // 释放后写入
+    // memset(buffer, 'A', 100);  // 实际通常不崩
+    
+    raise(SIGSEGV); // 手动触发 SIGSEGV 模拟后果
     return nullptr;
 }
 
@@ -160,7 +172,6 @@ EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports)
 {
     napi_property_descriptor desc[] = {
-        { "add", nullptr, Add, nullptr, nullptr, nullptr, napi_default, nullptr },
         // 崩溃模拟函数
         { "crashNullPointer", nullptr, CrashNullPointer, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "crashInvalidMemory", nullptr, CrashInvalidMemory, nullptr, nullptr, nullptr, napi_default, nullptr },

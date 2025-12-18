@@ -89,7 +89,7 @@ export class NativeCrashService {
     // this.checkAndProcessCrash();
 
     // 启动文件轮询检查
-    // this.startPolling();
+    this.startPolling();
   }
 
   /**

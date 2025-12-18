@@ -42,7 +42,7 @@ export class AppMonitorService {
 
     const listener = async (eventType: EventType, eventInfo: hiAppEvent.AppEventInfo) => {
       try {
-        this.log.warn(`Received event: ${eventType}, time: ${eventInfo.params['time']}`);
+        this.log.warn(`Received event: ${eventType}, time: ${new Date(eventInfo.params['time']).toLocaleString()}`);
         // 处理接收到的事件
 
         // 1. 保存到缓存

@@ -312,21 +312,23 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
 
     // 2. 使用 fork 在子进程中处理耗时/危险操作
     pid_t pid = fork();
-    
+
     if (pid == 0) {
+//        invoke_callback("CrashHandler: Native crash detected. 子进程");
         // === 子进程 ===
         // 在这里可以相对安全地分配内存、写文件
-        
+
         // 生成并保存日志
         std::string crash_file = save_crash_to_file(sig, signal_name, signal_reason, info, generate_crash_file_path());
-        
+
         if (!crash_file.empty()) {
             mark_crash_for_upload(crash_file.c_str());
             // 子进程不需要等待 ArkTS，只负责写文件
         }
-        
+
         _exit(0); // 子进程处理完立即退出
     } else if (pid > 0) {
+//        invoke_callback("CrashHandler: Native crash detected. 父进程");
         // === 父进程 ===
         // 等待子进程完成日志写入
         int status;
@@ -335,6 +337,7 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
         // 父进程继续执行原有的通知和等待逻辑
         OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "CrashHandler", 
                      "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
+    
 
         // 先设置延迟退出环境（包括设置 g_crash_thread_id），确保 ArkTS 回调时状态已就绪
         setup_delayed_exit(sig, g_crash_timeout);
@@ -347,12 +350,20 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
         wait_for_arkts_and_exit();
     }
 
+//    
+//    // 2. 先设置延迟退出环境，确保 ArkTS 回调时状态已就绪
+//    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "CrashHandler", "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
+//    setup_delayed_exit(sig, g_crash_timeout);
+//    wait_for_arkts_and_exit();
+
     // 3. 恢复默认信号处理并重新抛出
     signal(sig, SIG_DFL);
     raise(sig);
 }
 
 void register_signal_handlers() {
+    invoke_callback("CrashHandler: Native crash detected. register_signal_handlers");
+    
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_sigaction = crash_signal_handler;
