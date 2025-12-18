@@ -88,5 +88,5 @@ sequenceDiagram
 ArkTS 端通过 `NativeCrashService` 初始化：
 ```typescript
 // 初始化，设置缓存路径和超时时间(3s)
-testNapi.initCrashHandler(cacheDir, 3);
+testNapi.initNativeCrashHandler(cacheDir, 3);
 ```

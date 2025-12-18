@@ -4,7 +4,7 @@
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
     napi_property_descriptor desc[] = {
-        {"initCrashHandler", nullptr, InitCrashHandler, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"initNativeCrashHandler", nullptr, InitNativeCrashHandler, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"checkPendingCrash", nullptr, CheckPendingCrash, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"checkCrashState", nullptr, CheckCrashState, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setCallback", nullptr, SetCallback, nullptr, nullptr, nullptr, napi_default, nullptr},

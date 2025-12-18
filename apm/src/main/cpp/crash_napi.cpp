@@ -51,7 +51,7 @@ void invoke_callback(const char *message) {
 
 // ==================== NAPI 函数实现 ====================
 
-extern "C" napi_value InitCrashHandler(napi_env env, napi_callback_info info) {
+extern "C" napi_value InitNativeCrashHandler(napi_env env, napi_callback_info info) {
     // 获取参数
     size_t argc = 2;
     napi_value args[2] = {nullptr};
@@ -65,7 +65,7 @@ extern "C" napi_value InitCrashHandler(napi_env env, napi_callback_info info) {
             char buf[1024] = {0};
             napi_get_value_string_utf8(env, args[0], buf, sizeof(buf), &result);
             g_cache_dir = buf;
-            OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "CrashHandler", "Cache dir set to: %{public}s", g_cache_dir.c_str());
+            OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "NativeCrashHandler", "Cache dir set to: %{public}s", g_cache_dir.c_str());
         }
     }
 
@@ -77,7 +77,7 @@ extern "C" napi_value InitCrashHandler(napi_env env, napi_callback_info info) {
             napi_get_value_int32(env, args[1], &timeout);
             if (timeout > 0) {
                 g_crash_timeout = timeout;
-                OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "CrashHandler", "Crash timeout set to: %{public}d", g_crash_timeout);
+                OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "NativeCrashHandler", "Crash timeout set to: %{public}d", g_crash_timeout);
             }
         }
     }
@@ -237,7 +237,7 @@ extern "C" napi_value InvokeCallback(napi_env env, napi_callback_info info) {
 
 extern "C" napi_value NotifyCrashHandled(napi_env env, napi_callback_info info) {
     if (g_crash_thread_id != 0) {
-        OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "CrashHandler", "ArkTS notified crash handled, sending signal to crash thread");
+        OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "NativeCrashHandler", "ArkTS notified crash handled, sending signal to crash thread");
         pthread_kill(g_crash_thread_id, ARKTS_DONE_SIG);
 
         napi_value result;
@@ -245,7 +245,7 @@ extern "C" napi_value NotifyCrashHandled(napi_env env, napi_callback_info info) 
         return result;
     }
 
-    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "CrashHandler", "NotifyCrashHandled called but no crash pending");
+    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", "NotifyCrashHandled called but no crash pending");
     napi_value result;
     napi_get_boolean(env, false, &result);
     return result;

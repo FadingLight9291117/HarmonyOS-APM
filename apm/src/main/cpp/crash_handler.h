@@ -94,7 +94,7 @@ void crash_notify_handler(int sig);
 // ==================== NAPI 函数声明 ====================
 
 extern "C" {
-    napi_value InitCrashHandler(napi_env env, napi_callback_info info);
+    napi_value InitNativeCrashHandler(napi_env env, napi_callback_info info);
     napi_value CheckPendingCrash(napi_env env, napi_callback_info info);
     napi_value CheckCrashState(napi_env env, napi_callback_info info);
     napi_value SetCallback(napi_env env, napi_callback_info info);

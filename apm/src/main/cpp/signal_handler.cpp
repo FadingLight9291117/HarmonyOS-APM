@@ -220,7 +220,7 @@ void crash_notify_handler(int sig) {
 
 // SIGALRM 处理函数：超时强制退出
 static void alarm_handler(int sig) {
-    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "CrashHandler", "Timeout waiting for ArkTS, force exit");
+    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", "Timeout waiting for ArkTS, force exit");
     if (g_pending_crash_signal != 0) {
         signal(g_pending_crash_signal, SIG_DFL);
         sigset_t set;
@@ -236,7 +236,7 @@ static void alarm_handler(int sig) {
 // ArkTS 完成信号处理函数
 static void arkts_done_handler(int sig) {
     g_arkts_done = true;
-    OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "CrashHandler", "Received ArkTS done signal, exiting gracefully");
+    OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "NativeCrashHandler", "Received ArkTS done signal, exiting gracefully");
 }
 
 // ==================== 延迟退出机制 ====================
@@ -280,7 +280,7 @@ void wait_for_arkts_and_exit() {
         sigsuspend(&wait_set);
         if (g_arkts_done) {
             long long elapsed_time = (long long)(time(nullptr) * 1000) - g_crash_start_time;
-            OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "CrashHandler", 
+            OH_LOG_Print(LOG_APP, LOG_INFO, 0xFF00, "NativeCrashHandler", 
                          "ArkTS processing completed, elapsed time: %{public}lld ms, exiting", elapsed_time);
             break;
         }
@@ -314,7 +314,7 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
     pid_t pid = fork();
 
     if (pid == 0) {
-//        invoke_callback("CrashHandler: Native crash detected. 子进程");
+//        invoke_callback("NativeCrashHandler: Native crash detected. 子进程");
         // === 子进程 ===
         // 在这里可以相对安全地分配内存、写文件
 
@@ -328,14 +328,14 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
 
         _exit(0); // 子进程处理完立即退出
     } else if (pid > 0) {
-//        invoke_callback("CrashHandler: Native crash detected. 父进程");
+//        invoke_callback("NativeCrashHandler: Native crash detected. 父进程");
         // === 父进程 ===
         // 等待子进程完成日志写入
         int status;
         waitpid(pid, &status, 0);
 
         // 父进程继续执行原有的通知和等待逻辑
-        OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "CrashHandler", 
+        OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", 
                      "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
     
 
@@ -352,7 +352,7 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
 
 //    
 //    // 2. 先设置延迟退出环境，确保 ArkTS 回调时状态已就绪
-//    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "CrashHandler", "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
+//    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
 //    setup_delayed_exit(sig, g_crash_timeout);
 //    wait_for_arkts_and_exit();
 
@@ -362,7 +362,7 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
 }
 
 void register_signal_handlers() {
-    invoke_callback("CrashHandler: Native crash detected. register_signal_handlers");
+    invoke_callback("NativeCrashHandler: Native crash detected. register_signal_handlers");
     
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));

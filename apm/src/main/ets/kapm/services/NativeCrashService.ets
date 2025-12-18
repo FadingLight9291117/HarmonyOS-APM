@@ -79,7 +79,7 @@ export class NativeCrashService {
       });
 
       const cacheDir = this.cacheService.getCacheDir();
-      testNapi.initCrashHandler(cacheDir, 3);
+      testNapi.initNativeCrashHandler(cacheDir, 3);
       this.log.info('Native crash handler initialized with cache dir:', cacheDir);
     } catch (e) {
       this.log.error('Failed to initialize native crash handler', e.message);

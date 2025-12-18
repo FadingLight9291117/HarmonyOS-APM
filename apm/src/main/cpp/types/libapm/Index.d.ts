@@ -5,7 +5,7 @@
  * @param timeout 崩溃后等待 ArkTS 处理的超时时间（秒），默认为 3 秒
  * @returns 初始化是否成功
  */
-export const initCrashHandler: (cacheDir: string, timeout?: number) => boolean;
+export const initNativeCrashHandler: (cacheDir: string, timeout?: number) => boolean;
 
 /**
  * 检查是否有待处理的崩溃文件
