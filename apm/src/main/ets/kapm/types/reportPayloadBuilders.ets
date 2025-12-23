@@ -81,8 +81,8 @@ export class ReportPayloadBuilder {
       "product_name": this.config.productName,
 
       /** 版本控制字段 */
-      "branch_name": this.config.branchName,
-      "commit_revision": this.config.commitRevision,
+      "git_branch_name": this.config.branchName,
+      "git_commit_revision": this.config.commitRevision,
     };
 
     // 合并传入的内容字段

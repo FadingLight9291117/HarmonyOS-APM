@@ -23,16 +23,6 @@ export default class EntryAbility extends UIAbility {
           console.log('EntryAbility', "get user id called")
           return this.userId
         })
-        .setLogBackend({
-          d: (tag: string, msg: string): void => {
-          },
-          i: (tag: string, msg: string): void => {
-          },
-          e: (tag: string, msg: string): void => {
-          },
-          w: (tag: string, msg: string): void => {
-          }
-        })
         .build()
 
       ApmStarter.start(this.context, config)
