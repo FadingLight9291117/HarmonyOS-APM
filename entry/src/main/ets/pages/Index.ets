@@ -10,7 +10,9 @@ import {
   crashInThread,
   crashHeapOverflow,
   crashDoubleFree,
-  crashUseAfterFree
+  crashUseAfterFree,
+  crashStackFault,
+  crashBadSyscall
 } from 'native_error_demo';
 
 @Entry
@@ -23,7 +25,52 @@ struct Index {
       Text(this.message)
         .fontSize(24)
         .fontWeight(FontWeight.Bold)
-        .margin({ top: 20, bottom: 20 })
+        .margin({ top: 20, bottom: 10 })
+
+      // // 页面导航区域
+      // Text('页面跳转测试')
+      //   .fontSize(16)
+      //   .fontColor('#666')
+      //   .width('100%')
+      //   .padding({ left: 16, top: 10 })
+      //
+      // Row({ space: 10 }) {
+      //   Button('详情页')
+      //     .width('30%')
+      //     .backgroundColor('#007DFF')
+      //     .onClick(() => {
+      //       router.pushUrl({
+      //         url: 'pages/DetailPage',
+      //         params: {
+      //           message: '来自首页的消息'
+      //         }
+      //       });
+      //     })
+      //
+      //   Button('设置页')
+      //     .width('30%')
+      //     .backgroundColor('#36D1DC')
+      //     .onClick(() => {
+      //       router.pushUrl({
+      //         url: 'pages/SettingsPage',
+      //         params: {
+      //           from: 'Index'
+      //         }
+      //       });
+      //     })
+      //
+      //   Button('个人中心')
+      //     .width('30%')
+      //     .backgroundColor('#5CB3FF')
+      //     .onClick(() => {
+      //       router.pushUrl({
+      //         url: 'pages/ProfilePage'
+      //       });
+      //     })
+      // }
+      // .width('90%')
+      // .justifyContent(FlexAlign.SpaceEvenly)
+      // .margin({ top: 10, bottom: 20 })
 
       Scroll() {
         Column({ space: 10 }) {
@@ -39,6 +86,13 @@ struct Index {
             .backgroundColor('#FF5733')
             .onClick(() => {
               throw new Error('这是一个未捕获的 JavaScript 异常！');
+            })
+
+          Button('Promise 未处理拒绝')
+            .width('90%')
+            .backgroundColor('#FF5733')
+            .onClick(() => {
+              Promise.reject(new Error('这是一个未处理的 Promise 拒绝！'));
             })
 
           // SIGSEGV 类
@@ -134,6 +188,32 @@ struct Index {
             .backgroundColor('#9B59B6')
             .onClick(() => crashTrap())
 
+          // SIGSTKFLT 类
+          Text('SIGSTKFLT (栈错误)')
+            .fontSize(16)
+            .fontColor('#666')
+            .width('100%')
+            .padding({ left: 16 })
+            .margin({ top: 10 })
+
+          Button('栈错误')
+            .width('90%')
+            .backgroundColor('#D35400')
+            .onClick(() => crashStackFault())
+
+          // SIGSYS 类
+          Text('SIGSYS (错误系统调用)')
+            .fontSize(16)
+            .fontColor('#666')
+            .width('100%')
+            .padding({ left: 16 })
+            .margin({ top: 10 })
+
+          Button('错误的系统调用')
+            .width('90%')
+            .backgroundColor('#8E44AD')
+            .onClick(() => crashBadSyscall())
+
           // 线程崩溃
           Text('线程崩溃')
             .fontSize(16)
@@ -165,44 +245,44 @@ struct Index {
             .backgroundColor('#1ABC9C')
             .onClick(() => crashUseAfterFree())
 
-          // AppFreeze 模拟
-          Text('AppFreeze (应用冻结)')
-            .fontSize(16)
-            .fontColor('#666')
-            .width('100%')
-            .padding({ left: 16 })
-            .margin({ top: 10 })
-
-          Button('主线程长时间阻塞 (10秒)')
-            .width('90%')
-            .backgroundColor('#E67E22')
-            .onClick(() => {
-              console.info('开始模拟 AppFreeze - 主线程阻塞 10 秒');
-              const startTime = Date.now();
-              // 主线程执行耗时操作，导致 UI 冻结
-              while (Date.now() - startTime < 10000) {
-                // 空循环，阻塞主线程
-                let sum = 0;
-                for (let i = 0; i < 1000000; i++) {
-                  sum += i;
-                }
-              }
-              console.info('AppFreeze 模拟结束');
-            })
-
-          Button('主线程死循环 (需强制关闭)')
-            .width('90%')
-            .backgroundColor('#C0392B')
-            .onClick(() => {
-              console.warn('警告：触发死循环，应用将完全冻结！');
-              // 无限循环，只能通过强制关闭应用退出
-              while (true) {
-                let sum = 0;
-                for (let i = 0; i < 1000000; i++) {
-                  sum += i;
-                }
-              }
-            })
+          // // AppFreeze 模拟
+          // Text('AppFreeze (应用冻结)')
+          //   .fontSize(16)
+          //   .fontColor('#666')
+          //   .width('100%')
+          //   .padding({ left: 16 })
+          //   .margin({ top: 10 })
+          //
+          // Button('主线程长时间阻塞 (10秒)')
+          //   .width('90%')
+          //   .backgroundColor('#E67E22')
+          //   .onClick(() => {
+          //     console.info('开始模拟 AppFreeze - 主线程阻塞 10 秒');
+          //     const startTime = Date.now();
+          //     // 主线程执行耗时操作，导致 UI 冻结
+          //     while (Date.now() - startTime < 10000) {
+          //       // 空循环，阻塞主线程
+          //       let sum = 0;
+          //       for (let i = 0; i < 1000000; i++) {
+          //         sum += i;
+          //       }
+          //     }
+          //     console.info('AppFreeze 模拟结束');
+          //   })
+          //
+          // Button('主线程死循环 (需强制关闭)')
+          //   .width('90%')
+          //   .backgroundColor('#C0392B')
+          //   .onClick(() => {
+          //     console.warn('警告：触发死循环，应用将完全冻结！');
+          //     // 无限循环，只能通过强制关闭应用退出
+          //     while (true) {
+          //       let sum = 0;
+          //       for (let i = 0; i < 1000000; i++) {
+          //         sum += i;
+          //       }
+          //     }
+          //   })
         }
         .width('100%')
         .padding({ bottom: 20 })

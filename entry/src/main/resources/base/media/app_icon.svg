@@ -1,0 +1,21 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="100" cy="100" r="90" fill="#007DFF"/>
+  
+  <!-- 内圈 -->
+  <circle cx="100" cy="100" r="70" fill="#0066CC"/>
+  
+  <!-- 用户头像图标 -->
+  <circle cx="100" cy="80" r="25" fill="#FFFFFF"/>
+  
+  <!-- 身体部分 -->
+  <ellipse cx="100" cy="145" rx="45" ry="35" fill="#FFFFFF"/>
+  
+  <!-- 装饰元素 - 顶部小点 -->
+  <circle cx="100" cy="30" r="5" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="85" cy="35" r="3" fill="#FFFFFF" opacity="0.4"/>
+  <circle cx="115" cy="35" r="3" fill="#FFFFFF" opacity="0.4"/>
+  
+  <!-- 外围光环效果 -->
+  <circle cx="100" cy="100" r="85" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.3"/>
+</svg>

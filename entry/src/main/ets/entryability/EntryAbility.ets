@@ -7,6 +7,7 @@ import BuildProfile from 'BuildProfile';
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
+  userId: string = 'unknown'
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
@@ -20,7 +21,17 @@ export default class EntryAbility extends UIAbility {
         .setProductName(BuildProfile.PRODUCT_NAME)
         .setUserIdFunc(() => {
           console.log('EntryAbility', "get user id called")
-          return "test_user_id"
+          return this.userId
+        })
+        .setLogBackend({
+          d: (tag: string, msg: string): void => {
+          },
+          i: (tag: string, msg: string): void => {
+          },
+          e: (tag: string, msg: string): void => {
+          },
+          w: (tag: string, msg: string): void => {
+          }
         })
         .build()
 

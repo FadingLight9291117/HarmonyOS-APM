@@ -119,6 +119,26 @@ static napi_value CrashTrap(napi_env env, napi_callback_info info) {
 }
 
 /**
+ * 触发 SIGSTKFLT（栈错误）
+ * 注意：SIGSTKFLT 是 Linux 特有信号，用于协处理器栈错误。
+ * 现代系统很少自然触发此信号，这里手动发送以测试处理逻辑。
+ */
+static napi_value CrashStackFault(napi_env env, napi_callback_info info) {
+    raise(SIGSTKFLT);  // 手动触发 SIGSTKFLT
+    return nullptr;
+}
+
+/**
+ * 触发 SIGSYS（错误的系统调用）
+ * 注意：SIGSYS 通常在使用 seccomp 过滤器时触发，当进程尝试
+ * 调用被禁止的系统调用时产生。这里手动发送信号以测试。
+ */
+static napi_value CrashBadSyscall(napi_env env, napi_callback_info info) {
+    raise(SIGSYS);  // 手动触发 SIGSYS
+    return nullptr;
+}
+
+/**
  * 在子线程中触发崩溃
  */
 static void* threadCrashFunction(void* arg) {
@@ -172,15 +192,19 @@ EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports)
 {
     napi_property_descriptor desc[] = {
-        // 崩溃模拟函数
-        { "crashNullPointer", nullptr, CrashNullPointer, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "crashInvalidMemory", nullptr, CrashInvalidMemory, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "crashAbort", nullptr, CrashAbort, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "crashDivideByZero", nullptr, CrashDivideByZero, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "crashBusError", nullptr, CrashBusError, nullptr, nullptr, nullptr, napi_default, nullptr },
+        // 系统处理的崩溃信号测试（按信号编号排序）
+        { "crashIllegalInstruction", nullptr, CrashIllegalInstruction, nullptr, nullptr, nullptr, napi_default, nullptr },  // SIGILL (4)
+        { "crashTrap", nullptr, CrashTrap, nullptr, nullptr, nullptr, napi_default, nullptr },                              // SIGTRAP (5)
+        { "crashAbort", nullptr, CrashAbort, nullptr, nullptr, nullptr, napi_default, nullptr },                            // SIGABRT (6)
+        { "crashBusError", nullptr, CrashBusError, nullptr, nullptr, nullptr, napi_default, nullptr },                      // SIGBUS (7)
+        { "crashDivideByZero", nullptr, CrashDivideByZero, nullptr, nullptr, nullptr, napi_default, nullptr },              // SIGFPE (8)
+        { "crashNullPointer", nullptr, CrashNullPointer, nullptr, nullptr, nullptr, napi_default, nullptr },                // SIGSEGV (11)
+        { "crashInvalidMemory", nullptr, CrashInvalidMemory, nullptr, nullptr, nullptr, napi_default, nullptr },            // SIGSEGV (11)
+        { "crashStackFault", nullptr, CrashStackFault, nullptr, nullptr, nullptr, napi_default, nullptr },                  // SIGSTKFLT (16)
+        { "crashBadSyscall", nullptr, CrashBadSyscall, nullptr, nullptr, nullptr, napi_default, nullptr },                  // SIGSYS (31)
+        
+        // 其他崩溃场景测试
         { "crashStackOverflow", nullptr, CrashStackOverflow, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "crashIllegalInstruction", nullptr, CrashIllegalInstruction, nullptr, nullptr, nullptr, napi_default, nullptr },
-        { "crashTrap", nullptr, CrashTrap, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "crashInThread", nullptr, CrashInThread, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "crashHeapOverflow", nullptr, CrashHeapOverflow, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "crashDoubleFree", nullptr, CrashDoubleFree, nullptr, nullptr, nullptr, napi_default, nullptr },

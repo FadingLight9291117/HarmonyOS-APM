@@ -11,6 +11,7 @@ import { APMConfig } from '../kapm_config/types';
 import { AppMonitorService } from '../services/AppMonitorService';
 import { CacheScanUploadService } from '../services/CacheScanUploadService';
 import { NativeCrashService } from '../services/NativeCrashService';
+import { errorManager } from '@kit.AbilityKit';
 
 // 常量定义
 const DEFAULT_RETRY_INTERVAL = 1000;
@@ -106,7 +107,7 @@ export class APMCore {
     return this;
   }
 
-  startNetConService(): APMCore{
+  startNetConService(): APMCore {
     this.log.info('Starting Network Connection Listener');
     this.networkService.registerNetConnListen(() => {
       this.log.info('Network is available, triggering cache upload');
@@ -282,6 +283,25 @@ export class APMCore {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  onError(observer: (reason: Error) => void): void {
+    try {
+      errorManager.on('globalUnhandledRejectionDetected', observer)
+      errorManager.on("globalErrorOccurred", observer);
+      return
+    } catch (e) {
+      this.log.warn("Failed to use new api, so compatibility mode is enabled.");
+      try {
+        errorManager.on('error', {
+          onUnhandledException: () => {},
+          onException: observer,
+        })
+        errorManager.on("unhandledRejection", observer);
+      } catch (error) {
+        this.log.error('Error registering JS error observer:', error.message);
+      }
+    }
   }
 }
 

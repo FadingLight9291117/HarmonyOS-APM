@@ -1,5 +1,3 @@
-export const add: (a: number, b: number) => number;
-
 // ==================== 崩溃模拟函数 ====================
 
 /**
@@ -49,6 +47,18 @@ export const crashIllegalInstruction: () => void;
  * @warning 此方法会导致应用崩溃
  */
 export const crashTrap: () => void;
+
+/**
+ * 触发 SIGSTKFLT（栈错误）
+ * @warning 此方法会导致应用崩溃
+ */
+export const crashStackFault: () => void;
+
+/**
+ * 触发 SIGSYS（错误的系统调用）
+ * @warning 此方法会导致应用崩溃
+ */
+export const crashBadSyscall: () => void;
 
 /**
  * 在子线程中触发崩溃（SIGSEGV）

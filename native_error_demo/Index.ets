@@ -13,5 +13,7 @@ export {
   crashInThread,
   crashHeapOverflow,
   crashDoubleFree,
-  crashUseAfterFree
+  crashUseAfterFree,
+  crashStackFault,
+  crashBadSyscall
 } from 'libnative_error_demo.so';

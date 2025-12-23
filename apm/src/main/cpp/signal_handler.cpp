@@ -53,25 +53,33 @@ const char* get_signal_name(int sig) {
         case SIGILL: return "SIGILL";
         case SIGBUS: return "SIGBUS";
         case SIGTRAP: return "SIGTRAP";
+        case SIGSTKFLT: return "SIGSTKFLT";
+        case SIGSYS: return "SIGSYS";
         default: return "Unknown signal";
     }
 }
 
 const char* get_signal_reason(int sig, siginfo_t* info) {
-    if (info == nullptr) {
-        return "Unknown reason";
-    }
+    // 根据 HarmonyOS 官方文档和项目文档的映射表对齐
+    // 参考: https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/cppcrash-guidelines
     
     switch (sig) {
         case SIGSEGV:
+            if (info == nullptr) {
+                return "Segmentation fault";
+            }
             switch (info->si_code) {
                 case SEGV_MAPERR: return "Address not mapped to object";
                 case SEGV_ACCERR: return "Invalid permissions for mapped object";
                 default: return "Segmentation fault";
             }
         case SIGABRT:
+            // SIGABRT 通常不需要 si_code 信息
             return "Process abort signal";
         case SIGFPE:
+            if (info == nullptr) {
+                return "Floating-point exception";
+            }
             switch (info->si_code) {
                 case FPE_INTDIV: return "Integer divide by zero";
                 case FPE_INTOVF: return "Integer overflow";
@@ -84,6 +92,9 @@ const char* get_signal_reason(int sig, siginfo_t* info) {
                 default: return "Floating-point exception";
             }
         case SIGILL:
+            if (info == nullptr) {
+                return "Illegal instruction";
+            }
             switch (info->si_code) {
                 case ILL_ILLOPC: return "Illegal opcode";
                 case ILL_ILLOPN: return "Illegal operand";
@@ -96,6 +107,9 @@ const char* get_signal_reason(int sig, siginfo_t* info) {
                 default: return "Illegal instruction";
             }
         case SIGBUS:
+            if (info == nullptr) {
+                return "Bus error";
+            }
             switch (info->si_code) {
                 case BUS_ADRALN: return "Invalid address alignment";
                 case BUS_ADRERR: return "Nonexistent physical address";
@@ -103,11 +117,22 @@ const char* get_signal_reason(int sig, siginfo_t* info) {
                 default: return "Bus error";
             }
         case SIGTRAP:
+            // SIGTRAP 主要用于调试器断点，不属于系统处理的崩溃信号
+            // 保留处理逻辑用于兼容性
+            if (info == nullptr) {
+                return "Trace/breakpoint trap";
+            }
             switch (info->si_code) {
                 case TRAP_BRKPT: return "Process breakpoint";
                 case TRAP_TRACE: return "Process trace trap";
                 default: return "Trace/breakpoint trap";
             }
+        case SIGSTKFLT:
+            // SIGSTKFLT: 栈错误，处理器执行了错误的栈操作
+            return "Stack fault on coprocessor";
+        case SIGSYS:
+            // SIGSYS: 错误的系统调用
+            return "Bad system call";
         default:
             return "Unknown signal";
     }
@@ -310,53 +335,21 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* context) {
     strncpy(g_last_crash_name, signal_name, sizeof(g_last_crash_name) - 1);
     strncpy(g_last_crash_reason, signal_reason, sizeof(g_last_crash_reason) - 1);
 
-    // 2. 使用 fork 在子进程中处理耗时/危险操作
-    pid_t pid = fork();
+    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", 
+                 "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
 
-    if (pid == 0) {
-//        invoke_callback("NativeCrashHandler: Native crash detected. 子进程");
-        // === 子进程 ===
-        // 在这里可以相对安全地分配内存、写文件
+    // 2. 设置延迟退出环境，确保 ArkTS 回调时状态已就绪
+    setup_delayed_exit(sig, g_crash_timeout);
 
-        // 生成并保存日志
-        std::string crash_file = save_crash_to_file(sig, signal_name, signal_reason, info, generate_crash_file_path());
-
-        if (!crash_file.empty()) {
-            mark_crash_for_upload(crash_file.c_str());
-            // 子进程不需要等待 ArkTS，只负责写文件
-        }
-
-        _exit(0); // 子进程处理完立即退出
-    } else if (pid > 0) {
-//        invoke_callback("NativeCrashHandler: Native crash detected. 父进程");
-        // === 父进程 ===
-        // 等待子进程完成日志写入
-        int status;
-        waitpid(pid, &status, 0);
-
-        // 父进程继续执行原有的通知和等待逻辑
-        OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", 
-                     "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
-    
-
-        // 先设置延迟退出环境（包括设置 g_crash_thread_id），确保 ArkTS 回调时状态已就绪
-        setup_delayed_exit(sig, g_crash_timeout);
-
-        // 触发通知逻辑
-        if (g_main_thread_id != 0) {
-            pthread_kill(g_main_thread_id, CRASH_NOTIFY_SIG);
-        }
-
-        wait_for_arkts_and_exit();
+    // 3. 触发通知逻辑
+    if (g_main_thread_id != 0) {
+        pthread_kill(g_main_thread_id, CRASH_NOTIFY_SIG);
     }
 
-//    
-//    // 2. 先设置延迟退出环境，确保 ArkTS 回调时状态已就绪
-//    OH_LOG_Print(LOG_APP, LOG_WARN, 0xFF00, "NativeCrashHandler", "Native crash detected. (%{public}s: %{public}s)", g_last_crash_name, g_last_crash_reason);
-//    setup_delayed_exit(sig, g_crash_timeout);
-//    wait_for_arkts_and_exit();
+    // 4. 等待 ArkTS 处理完成或超时
+    wait_for_arkts_and_exit();
 
-    // 3. 恢复默认信号处理并重新抛出
+    // 5. 恢复默认信号处理并重新抛出
     signal(sig, SIG_DFL);
     raise(sig);
 }
@@ -370,10 +363,14 @@ void register_signal_handlers() {
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
     
-    sigaction(SIGSEGV, &sa, nullptr);
-    sigaction(SIGABRT, &sa, nullptr);
-    sigaction(SIGFPE, &sa, nullptr);
-    sigaction(SIGILL, &sa, nullptr);
-    sigaction(SIGBUS, &sa, nullptr);
-    sigaction(SIGTRAP, &sa, nullptr);
+    // 根据 HarmonyOS 官方文档，注册系统处理的崩溃信号
+    // 参考: https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/cppcrash-guidelines
+    sigaction(SIGSEGV, &sa, nullptr);   // 11: 段错误（非法内存访问）
+    sigaction(SIGABRT, &sa, nullptr);   //  6: 程序中止
+    sigaction(SIGFPE, &sa, nullptr);    //  8: 浮点异常
+    sigaction(SIGILL, &sa, nullptr);    //  4: 非法指令
+    sigaction(SIGBUS, &sa, nullptr);    //  7: 总线错误
+    sigaction(SIGSTKFLT, &sa, nullptr); // 16: 栈错误
+    sigaction(SIGSYS, &sa, nullptr);    // 31: 错误的系统调用
+    // 注意：SIGTRAP (5) 主要用于调试器断点，不属于系统处理的崩溃信号，因此不注册
 }
