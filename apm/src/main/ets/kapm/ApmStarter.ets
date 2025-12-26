@@ -1,7 +1,7 @@
 import { filterConfig } from "./kapm_config/APMConfigManager";
 import { APMConfig } from "./kapm_config/types";
 import { APMCore } from "./kapm_core/APMCore";
-import { getLogger, withLongTask } from "./utils";
+import { getLogger, withLock, withLockSync, withLongTask } from "./utils";
 import { withTimingSync } from "./utils/withTiming";
 
 export class ApmStarter {
@@ -9,10 +9,11 @@ export class ApmStarter {
   private readonly log = getLogger(this.TAG);
 
   static start(context: Context, config: Partial<APMConfig>) {
-    return withTimingSync<void>("ApmStater:init", () => {
-      const apmStarter = new ApmStarter();
-      apmStarter.init(config)
-    });
+    withLockSync("ApmStarter:init", () => {
+      withTimingSync<void>("ApmStarter:init", () => {
+        new ApmStarter().init(config)
+      })
+    })
   }
 
   private init(config: Partial<APMConfig>): void {
@@ -41,24 +42,22 @@ export class ApmStarter {
     }
   }
 
-  private faultDialogShown = false
-
-  private showFaultDialog(reason: Error, ms: number = 0): void {
-    if (this.faultDialogShown) return;
-    this.faultDialogShown = true;
-
-    const message = `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`;
-    setTimeout(() => {
-      AlertDialog.show({
-        title: "Crash Happened...",
-        message: message,
-        autoCancel: true,
-        alignment: DialogAlignment.Bottom,
-        offset: { dx: 0, dy: -20 },
-        gridCount: 4,
-        cancel: () => this.faultDialogShown = false,
+  private showFaultDialog(reason: Error, ms: number = 0) {
+    withLock<void>("ApmStarter:faultDialog", () => {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          AlertDialog.show({
+            title: "Crash Happened...",
+            message: `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`,
+            autoCancel: true,
+            alignment: DialogAlignment.Bottom,
+            offset: { dx: 0, dy: -20 },
+            gridCount: 4,
+            cancel: resolve,
+          })
+        }, ms)
       })
-    }, ms)
+    }, { onLockFailed: 'skip' })
   }
 }
 

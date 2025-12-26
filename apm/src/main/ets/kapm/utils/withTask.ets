@@ -53,23 +53,6 @@ export async function withLongTask<T, A extends object[]>(name: string, fn: (...
   }
 }
 
-// export async function withLongTask<T>(name: string, fn: () => T): Promise<T> {
-//   const logger = getLogger('withLongTask');
-//   const start = Date.now();
-//   try {
-//     const task = new taskpool.LongTask(fn);
-//     longTaskMap.set(name, task);
-//     const res = await taskpool.execute(task);
-//     const end = Date.now();
-//     logger.info(`Long Task ${name} completed in ${humanizeDuration(end - start)}`);
-//     return res as T;
-//   } catch (error) {
-//     const end = Date.now();
-//     logger.error(`Long Task ${name} failed after ${humanizeDuration(end - start)}:`, error);
-//     throw error as Error;
-//   }
-// }
-
 export function stopLongTask(name: string): void {
   const logger = getLogger('withLongTask');
   try {

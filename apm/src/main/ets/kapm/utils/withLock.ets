@@ -18,32 +18,78 @@ export interface LockOptions {
  */
 class Mutex {
   private locked: boolean = false;
-  private waiting: Array<() => void> = [];
+  private waiting: Array<Waiter> = [];
 
-  async acquire(): Promise<void> {
-    if (!this.locked) {
-      this.locked = true;
+  tryAcquire(): boolean {
+    if (this.locked) {
+      return false;
+    }
+    this.locked = true;
+    return true;
+  }
+
+  async acquire(timeoutMs: number = 0, lockNameForError: string = 'lock'): Promise<void> {
+    if (this.tryAcquire()) {
       return;
     }
 
-    return new Promise<void>((resolve) => {
-      this.waiting.push(resolve);
+    return new Promise<void>((resolve, reject) => {
+      const waiter: Waiter = { resolve, reject, canceled: false };
+
+      if (timeoutMs > 0) {
+        waiter.timerId = setTimeout(() => {
+          waiter.canceled = true;
+          // 从等待队列中移除，避免超时后仍被 release() 唤醒导致“幽灵持锁者”
+          const idx = this.waiting.indexOf(waiter);
+          if (idx >= 0) {
+            this.waiting.splice(idx, 1);
+          }
+          reject(new LockTimeoutError(lockNameForError, timeoutMs));
+        }, timeoutMs);
+      }
+
+      this.waiting.push(waiter);
     });
   }
 
   release(): void {
-    if (this.waiting.length > 0) {
+    // 释放时：优先唤醒一个未取消的等待者；如果都被取消了，则真正释放锁
+    while (this.waiting.length > 0) {
       const next = this.waiting.shift();
-      if (next) {
-        next();
+      if (!next) continue;
+      if (next.canceled) continue;
+      if (next.timerId) {
+        clearTimeout(next.timerId);
       }
-    } else {
-      this.locked = false;
+      // 这里不需要设置 locked = true：锁仍然保持占用状态，所有权转交给被唤醒者
+      next.resolve();
+      return;
     }
+
+    this.locked = false;
   }
 
   isLocked(): boolean {
     return this.locked;
+  }
+}
+
+interface Waiter {
+  resolve: () => void;
+  reject: (err: Error) => void;
+  canceled: boolean;
+  timerId?: number;
+};
+
+export class LockTimeoutError extends Error {
+  public readonly lockName: string;
+  public readonly timeoutMs: number;
+
+  constructor(lockName: string, timeoutMs: number) {
+    super(`Failed to acquire lock '${lockName}' within ${humanizeDuration(timeoutMs)}`);
+    this.name = 'LockTimeoutError';
+    this.lockName = lockName;
+    this.timeoutMs = timeoutMs;
   }
 }
 
@@ -74,28 +120,6 @@ const lockManager = new LockManager();
  * @param fn 要执行的异步函数
  * @param options 锁选项
  * @returns Promise<T> 操作结果
- * 
- * @example
- * ```typescript
- * // 基本用法
- * const result = await withLock('dataProcessing', async () => {
- *   return await processData();
- * });
- * 
- * // 带超时的锁
- * const result = await withLock('criticalOperation', async () => {
- *   return await criticalOperation();
- * }, {
- *   timeout: 5000,
- *   onLockFailed: 'throw'
- * });
- * 
- * // 锁被占用时跳过执行
- * const result = await withLock('optionalTask', async () => {
- *   return await optionalTask();
- * }, {
- *   onLockFailed: 'skip'
- * });
  * ```
  */
 export async function withLock<T>(
@@ -113,25 +137,13 @@ export async function withLock<T>(
 
   // 如果设置为 skip 且锁已被占用，立即返回 undefined
   if (onLockFailed === 'skip' && lock.isLocked()) {
-    logger.info(`${name}: skipping execution due to lock failure`);
+    logger.debug(`${name}: skipping execution due to lock failure`);
     return undefined;
   }
 
   // 尝试获取锁
   try {
-    if (timeout > 0) {
-      // 带超时的获取锁
-      const timeoutPromise = new Promise<void>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Failed to acquire lock '${lockName}' within ${humanizeDuration(timeout)}`));
-        }, timeout);
-      });
-
-      await Promise.race([lock.acquire(), timeoutPromise]);
-    } else {
-      // 无限等待获取锁
-      await lock.acquire();
-    }
+    await lock.acquire(timeout, lockName);
 
     const waitTime = Date.now() - start;
     if (waitTime > 0) {
@@ -140,26 +152,27 @@ export async function withLock<T>(
 
     try {
       const result = await fn();
+      logger.debug(`${name}: completed operation with lock '${lockName}'`);
       return result;
     } finally {
       lock.release();
       logger.debug(`${name}: released lock '${lockName}'`);
     }
   } catch (error) {
-    if (error?.message.includes('Failed to acquire lock')) {
+    if (error instanceof LockTimeoutError) {
       // 获取锁失败
       const waitTime = Date.now() - start;
       logger.warn(`${name}: failed to acquire lock '${lockName}' after ${humanizeDuration(waitTime)}`);
 
       if (onLockFailed === 'skip') {
-        logger.info(`${name}: skipping execution due to lock failure`);
+        logger.debug(`${name}: skipping execution due to lock failure`);
         return undefined;
       } else if (onLockFailed === 'wait') {
-        // 如果配置为等待，但已经超时，抛出错误
-        throw error as Error;
+        // 如果配置为等待，但设置了 timeout 仍然会超时：抛出错误交给上层决定
+        throw error;
       } else {
         // 默认行为：抛出错误
-        throw error as Error;
+        throw error;
       }
     } else {
       // 其他错误，释放锁后重新抛出
@@ -179,12 +192,6 @@ export async function withLock<T>(
  * @param fn 要执行的同步函数
  * @param options 锁选项
  * @returns T | null 操作结果
- * 
- * @example
- * ```typescript
- * const result = withLockSync('syncOperation', () => {
- *   return performSyncOperation();
- * });
  * ```
  */
 export function withLockSync<T>(
@@ -198,8 +205,8 @@ export function withLockSync<T>(
   const onLockFailed = options.onLockFailed ?? 'throw';
   const lock = lockManager.getLock(lockName);
 
-  // 同步检查锁状态
-  if (lock.isLocked()) {
+  // 同步场景下尝试立即获取锁（不等待）
+  if (!lock.tryAcquire()) {
     logger.warn(`${name}: lock '${lockName}' is already locked`);
 
     if (onLockFailed === 'skip') {
@@ -213,18 +220,16 @@ export function withLockSync<T>(
     }
   }
 
-  // 尝试立即获取锁（如果锁未被占用）
-  // 注意：由于 acquire 是异步的，这里我们假设锁状态检查是准确的
-  // 在实际使用中，建议使用异步版本的 withLock
   try {
-    // 标记为已锁定（在实际实现中，这应该通过 acquire 完成）
-    // 但由于这是同步版本，我们只能依赖 isLocked 检查
     const result = fn();
     logger.debug(`${name}: completed operation with lock '${lockName}'`);
     return result;
   } catch (error) {
-    logger.debug(`${name}: operation failed with lock '${lockName}'`);
+    logger.warn(`${name}: operation failed with lock '${lockName}'`);
     throw error as Error;
+  } finally {
+    lock.release();
+    logger.debug(`${name}: released lock '${lockName}' (sync)`);
   }
 }
 
