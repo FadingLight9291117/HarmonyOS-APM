@@ -1,3 +1,4 @@
+import { filterConfig } from "./kapm_config/APMConfigManager";
 import { APMConfig } from "./kapm_config/types";
 import { APMCore } from "./kapm_core/APMCore";
 import { getLogger, withLongTask } from "./utils";
@@ -21,10 +22,19 @@ export class ApmStarter {
         .startCacheServices()
         .startNetConService()
         .onError(error => {
-          if (config.isDebug) this.showFaultDialog(error)
+          // this.log.error('Error in APMCore Main Services:', error.message, '\n', error.stack ?? '');
+          if (config.isDebug) {
+            this.showFaultDialog(error);
+          }
         })
+
       withLongTask('ApmThreadServices', startMonitorServices, filterConfig(config))
-        .catch((error: Error) => this.showFaultDialog(error))
+        .catch((error: Error) => {
+          this.log.error('Error in APMCore Thread Services:', error.message, '\n', error.stack ?? '');
+          if (config.isDebug) {
+            this.showFaultDialog(error, 100);
+          }
+        })
 
     } catch (error) {
       this.log.error('Error initializing APMCore:', error.message, error.stack);
@@ -33,10 +43,8 @@ export class ApmStarter {
 
   private faultDialogShown = false
 
-  private showFaultDialog(reason: Error): void {
-    if (this.faultDialogShown) {
-      return;
-    }
+  private showFaultDialog(reason: Error, ms: number = 0): void {
+    if (this.faultDialogShown) return;
     this.faultDialogShown = true;
 
     const message = `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`;
@@ -50,14 +58,8 @@ export class ApmStarter {
         gridCount: 4,
         cancel: () => this.faultDialogShown = false,
       })
-    })
+    }, ms)
   }
-}
-
-
-function filterConfig(config: Partial<APMConfig>) {
-  config.logBackend = undefined;
-  return config
 }
 
 @Concurrent

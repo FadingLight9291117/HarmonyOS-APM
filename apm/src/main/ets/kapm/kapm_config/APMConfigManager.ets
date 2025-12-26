@@ -118,3 +118,7 @@ export class APMConfigManager {
   }
 }
 
+export function filterConfig(config: Partial<APMConfig>) {
+  config.logBackend = undefined;
+  return config;
+}

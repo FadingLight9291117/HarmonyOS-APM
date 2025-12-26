@@ -154,7 +154,7 @@ export class APMCore {
     }
 
     this.isScanning = true;
-    this.log.info('Starting cache scan and upload of pending reports');
+    this.log.info('Starting scanCacheAndUpload...');
 
     try {
       await this.cacheService.waitForIdle();
@@ -281,14 +281,34 @@ export class APMCore {
     });
   }
 
+  static async reportError(name: string, reason: string, stack: string): Promise<void> {
+    const instance = APMCore.getInstance();
+
+    try {
+      // 1. 落盘：逻辑统一收敛到 CacheService
+      const payload = await instance.cacheService.saveJsError({
+        name,
+        reason,
+        stack,
+        source: 'onUnhandledRejection',
+      });
+
+      // 2. 尝试立即上传；无网时会跳过，但文件已落盘，后续 scan 会补传
+      await APMCore.reportFile(payload, 'APMCore.reportError');
+    } catch (e) {
+      // reportError 不能再抛异常，避免递归触发 error handler
+      instance.log.error('reportError failed', e?.message);
+    }
+  }
+
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   onError(observer: (reason: Error) => void): void {
     try {
-      errorManager.on('globalUnhandledRejectionDetected', observer)
-      errorManager.on("globalErrorOccurred", observer);
+      errorManager.on("globalErrorOccurred", observer); // 全局未捕获异常监听，包括子线程error；新版API，旧版API见catch
+      errorManager.on('globalUnhandledRejectionDetected', this.onUnhandledRejection(observer)); // 全局未处理Promise拒绝监听, 旧版API见catch
       return
     } catch (e) {
       this.log.warn("Failed to use new api, so compatibility mode is enabled.");
@@ -297,11 +317,21 @@ export class APMCore {
           onUnhandledException: () => {},
           onException: observer,
         })
-        errorManager.on("unhandledRejection", observer);
+        errorManager.on("unhandledRejection", this.onUnhandledRejection(observer));
       } catch (error) {
         this.log.error('Error registering JS error observer:', error.message);
       }
     }
   }
-}
 
+  private onUnhandledRejection(observer: (reason: Error) => void) {
+    return (error: Error) => {
+      this.log.warn("Caught unhandled promise rejection:", error.message);
+      // 处理未捕获的Promise拒绝
+
+      error.name += '(UnhandledPromiseRejection)';
+      APMCore.reportError('UnhandledPromiseRejection', error.message, error.stack || '');
+      observer(error);
+    }
+  }
+}

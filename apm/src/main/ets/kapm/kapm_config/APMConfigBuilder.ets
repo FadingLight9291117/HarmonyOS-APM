@@ -2,7 +2,7 @@ import { APMConfig } from './types';
 import { getFileSystem } from '../platform/FileSystem';
 import { APMConfigManager } from './APMConfigManager';
 import { getDefaultApmConfig } from './defaultConfig';
-import { IKLogAdapter, KLogAdapter, LogBackend } from '../utils/log/Logger';
+import { IKLogAdapter, KLogAdapter } from '../utils/log/Logger';
 
 
 /**
@@ -107,7 +107,7 @@ export class APMConfigBuilder {
    * 设置日志后端（可选，用于自定义日志输出）
    * @param logBackend 实现 LogBackend 接口的日志实现
    */
-  setLogBackend(logBackend: IKLogAdapter): APMConfigBuilder {
+  setLogBackend<T extends IKLogAdapter>(logBackend: T): APMConfigBuilder {
     this.config.logBackend = new KLogAdapter(logBackend)
     return this;
   }

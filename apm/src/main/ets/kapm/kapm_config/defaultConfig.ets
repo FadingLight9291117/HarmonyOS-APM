@@ -6,7 +6,7 @@ import { APMConfig } from './types';
  */
 const DEFAULT_CONFIG: APMConfig = {
   // SDK 核心配置
-  sdkVersion: '1.0.0',
+  sdkVersion: '1.1.0',
   appId: 'Eo2vHmS5',
   encrypt_ver: 'ohos-mobile-v1',
   isDebug: true,
@@ -35,7 +35,7 @@ const DEFAULT_CONFIG: APMConfig = {
  */
 const TEST_CONFIG: APMConfig = {
   // SDK 核心配置
-  sdkVersion: '1.0.0-test',
+  sdkVersion: '1.1.0-test',
   appId: 'Eo2vHmS5',
   encrypt_ver: 'ohos-mobile-v1',
   keys: [],
