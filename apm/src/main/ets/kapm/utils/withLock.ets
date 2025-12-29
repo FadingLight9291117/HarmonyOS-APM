@@ -32,7 +32,6 @@ class Mutex {
     if (this.tryAcquire()) {
       return;
     }
-
     return new Promise<void>((resolve, reject) => {
       const waiter: Waiter = { resolve, reject, canceled: false };
 

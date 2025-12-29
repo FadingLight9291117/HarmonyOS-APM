@@ -208,32 +208,16 @@ export class APMCore {
    */
   static async reportFile(payload: ReportPayload, source: string): Promise<ReportSkippedResult> {
     const config = APMCore.config;
-    if (!config) {
-      throw new Error('APMCore.config is not set. Call APMCore.init() first.');
+    if (!config|| !APMCore.isInitialized) {
+      throw new Error('APMCore is not initialized. Call APMCore.init() first.');
     }
+    const instance = APMCore.getInstance();
     const log = getLogger(APMCore.TAG);
     const analyType: number = payload.bus._analy_type;
     const attachmentCount: number = payload.attachments?.length ?? 0;
 
-    // Create services for Task environment
-    const networkService = new NetworkService(config);
-    const tokenService = new TokenService(config, networkService);
-    const ecService = new EncryptCompressService({
-      keyHex: config.keys[0],
-      iv: config.keys[1],
-    });
-    const reportService = new ReportService({
-      networkService: networkService,
-      tokenService: tokenService,
-      ecService: ecService,
-      retryInterval: config.retryInterval ?? DEFAULT_RETRY_INTERVAL,
-      maxRetryCount: config.maxRetryCount ?? DEFAULT_MAX_RETRY_COUNT,
-      shouldEncrypt: config.enableEncryptTransfer,
-      encryptVersion: config.encrypt_ver,
-    });
-
     // Check network availability first
-    if (!await networkService.isConnectAvailable()) {
+    if (!await instance.networkService.isConnectAvailable()) {
       log.warn('File upload skipped - network unavailable', JSON.stringify({
         analyType: analyType,
         attachments: attachmentCount,
@@ -244,19 +228,14 @@ export class APMCore {
 
     return withTiming(`${APMCore.TAG}:reportFile`, async () => {
       try {
-        log.debug('Building payload with attachments', JSON.stringify({
-          analyType: analyType,
-          attachmentCount: attachmentCount,
-        }));
-
-        const builtPayload = reportService.buildPayload(
+        const builtPayload = instance.reportService.buildPayload(
           payload.base,
           payload.bus,
           payload.cacheDir,
           payload.extra,
           payload.attachments
         );
-        const reportResult = await reportService.reportZip(builtPayload);
+        const reportResult = await instance.reportService.reportZip(builtPayload);
 
         if (reportResult.success) {
           log.info('File upload success', JSON.stringify({
@@ -281,18 +260,12 @@ export class APMCore {
     });
   }
 
-  static async reportError(name: string, reason: string, stack: string): Promise<void> {
+  static async reportError(name: string, reason: string, stack: string, source?: string): Promise<void> {
     const instance = APMCore.getInstance();
 
     try {
       // 1. 落盘：逻辑统一收敛到 CacheService
-      const payload = await instance.cacheService.saveJsError({
-        name,
-        reason,
-        stack,
-        source: 'onUnhandledRejection',
-      });
-
+      const payload = await instance.cacheService.saveJsError({ name, reason, stack, source });
       // 2. 尝试立即上传；无网时会跳过，但文件已落盘，后续 scan 会补传
       await APMCore.reportFile(payload, 'APMCore.reportError');
     } catch (e) {
@@ -328,9 +301,8 @@ export class APMCore {
     return (error: Error) => {
       this.log.warn("Caught unhandled promise rejection:", error.message);
       // 处理未捕获的Promise拒绝
-
       error.name += '(UnhandledPromiseRejection)';
-      APMCore.reportError('UnhandledPromiseRejection', error.message, error.stack || '');
+      APMCore.reportError('UnhandledPromiseRejection', error.message, error.stack || '', 'UnhandledPromiseRejection');
       observer(error);
     }
   }

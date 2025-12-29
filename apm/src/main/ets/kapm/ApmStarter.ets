@@ -22,42 +22,33 @@ export class ApmStarter {
       APMCore.init(config)
         .startCacheServices()
         .startNetConService()
-        .onError(error => {
-          // this.log.error('Error in APMCore Main Services:', error.message, '\n', error.stack ?? '');
-          if (config.isDebug) {
-            this.showFaultDialog(error);
-          }
-        })
+        .onError(this.onCrashHappened(config.isDebug))
 
       withLongTask('ApmThreadServices', startMonitorServices, filterConfig(config))
-        .catch((error: Error) => {
-          this.log.error('Error in APMCore Thread Services:', error.message, '\n', error.stack ?? '');
-          if (config.isDebug) {
-            this.showFaultDialog(error, 100);
-          }
-        })
+        .catch(this.onCrashHappened(config.isDebug, 500));
 
     } catch (error) {
       this.log.error('Error initializing APMCore:', error.message, error.stack);
     }
   }
 
-  private showFaultDialog(reason: Error, ms: number = 0) {
-    withLock<void>("ApmStarter:faultDialog", () => {
-      return new Promise(resolve => {
-        setTimeout(() => {
-          AlertDialog.show({
-            title: "Crash Happened...",
-            message: `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`,
-            autoCancel: true,
-            alignment: DialogAlignment.Bottom,
-            offset: { dx: 0, dy: -20 },
-            gridCount: 4,
-            cancel: resolve,
-          })
-        }, ms)
-      })
-    }, { onLockFailed: 'skip' })
+  private onCrashHappened(isDebug: boolean = true, ms: number = 0): (reason: Error) => void | Promise<void> {
+    if (!isDebug) {
+      return (_reason: Error) => { /* no-op in non-debug mode */ }
+    }
+    return (reason: Error) => withLock<void>("ApmStarter:faultDialog", () => new Promise(resolve => {
+      setTimeout(() => {
+        AlertDialog.show({
+          title: "Crash Happened...",
+          message: `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`,
+          autoCancel: true,
+          alignment: DialogAlignment.Bottom,
+          offset: { dx: 0, dy: -20 },
+          gridCount: 4,
+          cancel: resolve,
+        })
+      }, ms)
+    }), { onLockFailed: 'skip' })
   }
 }
 
