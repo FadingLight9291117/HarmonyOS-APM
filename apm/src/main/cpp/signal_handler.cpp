@@ -6,6 +6,7 @@
  */
 
 #include "crash_handler.h"
+#include <bits/signal.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -368,9 +369,12 @@ void register_signal_handlers() {
     sigaction(SIGSEGV, &sa, nullptr);   // 11: 段错误（非法内存访问）
     sigaction(SIGABRT, &sa, nullptr);   //  6: 程序中止
     sigaction(SIGFPE, &sa, nullptr);    //  8: 浮点异常
-    sigaction(SIGILL, &sa, nullptr);    //  4: 非法指令
     sigaction(SIGBUS, &sa, nullptr);    //  7: 总线错误
     sigaction(SIGSTKFLT, &sa, nullptr); // 16: 栈错误
-    sigaction(SIGSYS, &sa, nullptr);    // 31: 错误的系统调用
-    // 注意：SIGTRAP (5) 主要用于调试器断点，不属于系统处理的崩溃信号，因此不注册
+    // 说明：这里刻意不注册部分信号（保持注释），原因是我们一旦手动 sigaction 覆盖系统默认处理器，
+    // 可能导致系统侧的崩溃处理机制失效（例如系统不再生成标准崩溃日志/上报链路被中断）。
+    // 因此默认仅注册官方文档明确属于“系统处理的崩溃信号”的集合；其余信号如需接管，应评估对系统处理的影响再开启。
+//    sigaction(SIGILL, &sa, nullptr);    //  4: 非法指令（手动注册可能覆盖系统处理）
+//    sigaction(SIGSYS, &sa, nullptr);    // 31: 错误的系统调用（手动注册可能覆盖系统处理）
+//    sigaction(SIGTRAP, &sa, nullptr);   // 5: 跟踪/断点陷阱（注意：SIGTRAP (5) 主要用于调试器断点，不属于系统处理的崩溃信号，因此不注册）
 }
