@@ -6,7 +6,6 @@
  */
 
 #include "crash_handler.h"
-#include <bits/signal.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
