@@ -32,23 +32,29 @@ export class ApmStarter {
     }
   }
 
-  private onCrashHappened(isDebug: boolean = true, ms: number = 0): (reason: Error) => void | Promise<void> {
+  private onCrashHappened(isDebug: boolean = true, ms: number = 0): (reason: Error) => void {
     if (!isDebug) {
       return (_reason: Error) => { /* no-op in non-debug mode */ }
     }
-    return (reason: Error) => withLock<void>("ApmStarter:faultDialog", () => new Promise(resolve => {
-      setTimeout(() => {
-        AlertDialog.show({
-          title: "Crash Happened...",
-          message: `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`,
-          autoCancel: true,
-          alignment: DialogAlignment.Bottom,
-          offset: { dx: 0, dy: -20 },
-          gridCount: 4,
-          cancel: resolve,
+    return (reason: Error) => {
+      void withLock<void>("ApmStarter:faultDialog", async () => {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            AlertDialog.show({
+              title: "Crash Happened...",
+              message: `Error name: ${reason.name}\nError message: ${reason.message}\nStacktrace:\n${reason.stack}`,
+              autoCancel: true,
+              alignment: DialogAlignment.Bottom,
+              offset: { dx: 0, dy: -20 },
+              gridCount: 4,
+              cancel: resolve,
+            })
+          }, ms)
         })
-      }, ms)
-    }), { onLockFailed: 'skip' })
+      }, { onLockFailed: 'skip' }).catch(() => {
+        // 不影响主流程，避免未处理 Promise 拒绝
+      })
+    }
   }
 }
 

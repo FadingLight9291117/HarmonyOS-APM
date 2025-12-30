@@ -201,14 +201,15 @@ export class APMCore {
 
   /**
    * Report data with file attachments as a ZIP package.
-   * This method creates its own services internally for use in Task environment.
+   * 注意：主线程与子线程各自会 init 一次（子线程通过 @Concurrent 入口），
+   * 这里复用当前线程内的 APMCore 单例服务进行上报。
    * @param payload Report payload containing base info, business data and attachments
    * @param source Source identifier for logging purposes
    * @returns Upload result indicating success/failure
    */
   static async reportFile(payload: ReportPayload, source: string): Promise<ReportSkippedResult> {
     const config = APMCore.config;
-    if (!config|| !APMCore.isInitialized) {
+    if (!config || !APMCore.isInitialized) {
       throw new Error('APMCore is not initialized. Call APMCore.init() first.');
     }
     const instance = APMCore.getInstance();
