@@ -7,13 +7,13 @@ import { APMConfig } from './types';
 const DEFAULT_CONFIG: APMConfig = {
   // SDK 核心配置
   sdkVersion: '1.1.0',
-  appId: 'Eo2vHmS5',
+  appId: '<YOUR_APP_ID>',
   encrypt_ver: 'ohos-mobile-v1',
   isDebug: true,
   keys: [], // 密钥
 
   // 网络配置
-  baseURL: 'https://kbee.wps.cn',
+  baseURL: '<YOUR_BASE_URL>',
   maxRetryCount: 1,
   retryInterval: 1000,
 
@@ -36,7 +36,7 @@ const DEFAULT_CONFIG: APMConfig = {
 const TEST_CONFIG: APMConfig = {
   // SDK 核心配置
   sdkVersion: '1.1.0-test',
-  appId: 'Eo2vHmS5',
+  appId: '<YOUR_APP_ID>',
   encrypt_ver: 'ohos-mobile-v1',
   keys: [],
   isDebug: true,

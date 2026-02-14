@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\fadin\\.ohos\\config\\default_apm_demo_thrid_phase_MsQWCDTbRtVLjpk3vnHvHf7MCFQ3voC_vz3nTxQ6N7M=.cer",
+          "certpath": "<YOUR_CERT_PATH>.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001A03F250B958AB8BF50E800FD147D27368C19ACBD6F157FA47BD0F41E33C1682077F142972FD56",
-          "profile": "C:\\Users\\fadin\\.ohos\\config\\default_apm_demo_thrid_phase_MsQWCDTbRtVLjpk3vnHvHf7MCFQ3voC_vz3nTxQ6N7M=.p7b",
+          "keyPassword": "<YOUR_KEY_PASSWORD>",
+          "profile": "<YOUR_PROFILE_PATH>.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\fadin\\.ohos\\config\\default_apm_demo_thrid_phase_MsQWCDTbRtVLjpk3vnHvHf7MCFQ3voC_vz3nTxQ6N7M=.p12",
-          "storePassword": "0000001A4F9F0B97CE1B7180C29F52FE82BA066841E8E339F0BE6B649E03F9D463D4674EA499E98C7B8F"
+          "storeFile": "<YOUR_KEYSTORE_PATH>.p12",
+          "storePassword": "<YOUR_STORE_PASSWORD>"
         }
       }
     ],

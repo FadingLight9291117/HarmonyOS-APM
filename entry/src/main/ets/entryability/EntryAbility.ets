@@ -15,7 +15,7 @@ export default class EntryAbility extends UIAbility {
       const context = this.context.getApplicationContext()
 
       const config = APMConfigBuilder.create(context, false)
-        .setKeys('N4%mqz8M4ssbBBg$Y#AmZcTA7*Zb2G$x', 'mjZZxxVE24N&D#TD')
+        .setKeys('<YOUR_AES_KEY>', '<YOUR_AES_IV>')
         .setDebug(true)
         .setAppVersion('1.10.0-apm-dev')
         .setProductName(BuildProfile.PRODUCT_NAME)
