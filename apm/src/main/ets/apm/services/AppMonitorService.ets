@@ -1,13 +1,13 @@
-import { ApmEventMonitorBuilder } from "../kapm_data_collection/event/ApmEventMonitorBuilder";
-import { EventChannel, EventType } from "../kapm_data_collection/event/EventChannel";
+import { ApmEventMonitorBuilder } from "../data_collection/event/ApmEventMonitorBuilder";
+import { EventChannel, EventType } from "../data_collection/event/EventChannel";
 import { getLogger } from "../utils";
 import { hiAppEvent } from "@kit.PerformanceAnalysisKit";
 import { CacheService } from "./CacheService";
-import { EventInfoParams } from "../kapm_cache/save/types";
-import { APMConfigManager } from "../kapm_config/APMConfigManager";
-import { APMCore } from "../kapm_core/APMCore";
+import { EventInfoParams } from "../cache/save/types";
+import { APMConfigManager } from "../config/APMConfigManager";
+import { APMCore } from "../core/APMCore";
 import { FileSystem, getFileSystem } from "../platform/FileSystem";
-import { EventsMonitor } from "../kapm_data_collection/event/system/crash/EventsMonitor";
+import { EventsMonitor } from "../data_collection/event/system/crash/EventsMonitor";
 import { notifyCrashHandled } from "libapm.so";
 
 const HIAPPEVENT_LOGPATH = "/data/storage/el2/log/hiappevent/"

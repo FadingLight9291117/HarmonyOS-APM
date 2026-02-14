@@ -155,11 +155,11 @@ strategy
 # ============================================================
 
 # 外部配置类型（APMConfig 通过 APMConfigBuilder 暴露给外部，外部可以直接传对象字面量）
--keep src/main/ets/kapm/kapm_config/types.ets
+-keep src/main/ets/apm/config/types.ets
 
 # 数据序列化类型（JSON 序列化保存到本地或上传到服务端）
--keep src/main/ets/kapm/kapm_cache/types/FileInfo.ets
--keep src/main/ets/kapm/kapm_cache/save/types.ets
--keep src/main/ets/kapm/types/uploadTypes.ets
--keep src/main/ets/kapm/types/reportTypes.ets
--keep src/main/ets/kapm/types/networkTypes.ets
+-keep src/main/ets/apm/cache/types/FileInfo.ets
+-keep src/main/ets/apm/cache/save/types.ets
+-keep src/main/ets/apm/types/uploadTypes.ets
+-keep src/main/ets/apm/types/reportTypes.ets
+-keep src/main/ets/apm/types/networkTypes.ets

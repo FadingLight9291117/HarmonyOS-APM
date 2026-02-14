@@ -1,6 +1,6 @@
-import { filterConfig } from "./kapm_config/APMConfigManager";
-import { APMConfig } from "./kapm_config/types";
-import { APMCore } from "./kapm_core/APMCore";
+import { filterConfig } from "./config/APMConfigManager";
+import { APMConfig } from "./config/types";
+import { APMCore } from "./core/APMCore";
 import { getLogger, withLock, withLockSync, withLongTask } from "./utils";
 import { withTimingSync } from "./utils/withTiming";
 

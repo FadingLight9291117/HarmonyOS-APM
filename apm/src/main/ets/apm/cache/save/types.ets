@@ -3,7 +3,7 @@
  * 根据华为 hiappevent 文档规范定义
  */
 
-import { UploadInfo } from "../../kapm_config/types";
+import { UploadInfo } from "../../config/types";
 
 /**
  * 异常信息对象

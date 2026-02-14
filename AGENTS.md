@@ -55,16 +55,16 @@ Rule sets:
 ```
 apm/
   Index.ets                          # Public API: ApmStarter, APMConfig, APMConfigBuilder
-  src/main/ets/kapm/
+  src/main/ets/apm/
     ApmStarter.ets                   # SDK entry point
-    kapm_core/APMCore.ets            # Core singleton, orchestrates all services
-    kapm_config/                     # Config types, defaults, builder, manager
+    core/APMCore.ets                 # Core singleton, orchestrates all services
+    config/                          # Config types, defaults, builder, manager
     services/                        # TokenService, NetworkService, ReportService, CacheService, etc.
     utils/                           # Functional wrappers (withRetry, withLock, withTimeout, etc.)
     types/                           # Report/network/upload type definitions
     platform/                        # Platform abstractions (FileSystem, Crypto, NetworkClient, Compression)
-    kapm_cache/                      # Cache save/scan/clean/use logic
-    kapm_data_collection/            # Event monitoring (EventChannel, AppMonitor, NativeCrash)
+    cache/                           # Cache save/scan/clean/use logic
+    data_collection/                 # Event monitoring (EventChannel, AppMonitor, NativeCrash)
   src/main/cpp/                      # Native C++ crash handler (NAPI)
 entry/
   src/main/ets/                      # Demo app (EntryAbility, pages)
@@ -82,7 +82,7 @@ native_error_demo/
 
 ### Imports
 
-- Use **relative paths** within a module (`'./kapm_config/types'`, `'../utils'`).
+- Use **relative paths** within a module (`'./config/types'`, `'../utils'`).
 - Use **bare module names** for cross-module imports (`'apm'`, `'native_error_demo'`).
 - Use **`@kit.*`** for HarmonyOS SDK imports (`@kit.AbilityKit`, `@kit.ArkUI`, `@kit.CryptoArchitectureKit`).
 - Group order: HarmonyOS SDK imports, then project imports. No blank line required between groups.
@@ -100,7 +100,7 @@ native_error_demo/
 | Namespaces          | PascalCase         | `Crypto`, `Compression`, `CacheValidation` |
 | Files (classes)     | PascalCase.ets     | `APMCore.ets`, `TokenService.ets`          |
 | Files (utilities)   | camelCase.ets      | `withRetry.ets`, `safeOperations.ets`      |
-| Directories         | snake_case         | `kapm_core`, `kapm_config`, `kapm_cache`   |
+| Directories         | snake_case         | `core`, `config`, `cache`                  |
 | TAG constants       | class name string  | `private readonly TAG = 'APMCore'`         |
 
 ### Types and Generics

@@ -1,6 +1,6 @@
 import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
-import { BusInfoDataType, AnalyTypeEnum, CrashBranchEnum } from '../../../main/ets/kapm/types/uploadTypes';
-import { buildAnalySemanticName, buildZipFileName } from '../../../main/ets/kapm/utils/uploadHelpers';
+import { BusInfoDataType, AnalyTypeEnum, CrashBranchEnum } from '../../../main/ets/apm/types/uploadTypes';
+import { buildAnalySemanticName, buildZipFileName } from '../../../main/ets/apm/utils/uploadHelpers';
 
 export default function uploadHelpersTest() {
   describe('UploadHelpersTest', () => {

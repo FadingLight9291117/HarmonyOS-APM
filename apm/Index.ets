@@ -1,3 +1,3 @@
-export { ApmStarter } from './src/main/ets/kapm/ApmStarter'
-export { APMConfig } from './src/main/ets/kapm/kapm_config/types'
-export  { APMConfigBuilder } from './src/main/ets/kapm/kapm_config/APMConfigBuilder'
+export { ApmStarter } from './src/main/ets/apm/ApmStarter'
+export { APMConfig } from './src/main/ets/apm/config/types'
+export  { APMConfigBuilder } from './src/main/ets/apm/config/APMConfigBuilder'

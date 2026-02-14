@@ -1,4 +1,4 @@
-import { APMConfig } from '../kapm_config/types';
+import { APMConfig } from '../config/types';
 import { createDefaultNetworkClient } from '../platform/NetworkClient';
 import { ServerStrategy, Strategy } from '../types/networkTypes';
 import { getLogger } from '../utils';

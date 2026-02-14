@@ -16,7 +16,7 @@ import { getFileSystem } from '../platform/FileSystem';
 import { getLogger } from '../utils/log/Logger';
 import { Crypto } from '../platform/Crypto';
 import { humanizeBytes, withTiming } from '../utils';
-import { APMConfig } from '../kapm_config/types';
+import { APMConfig } from '../config/types';
 import { connection } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 

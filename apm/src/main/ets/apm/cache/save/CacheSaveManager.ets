@@ -1,5 +1,5 @@
 import { FileSystem } from '../../platform/FileSystem';
-import { UploadInfo } from '../../kapm_config/types';
+import { UploadInfo } from '../../config/types';
 import { getLogger } from '../../utils';
 import { CacheConfig } from '../config/types';
 import { EventInfoParams, CachedFileMeta } from './types';

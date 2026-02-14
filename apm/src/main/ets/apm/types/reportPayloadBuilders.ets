@@ -1,4 +1,4 @@
-import { APMConfig, UploadInfo } from '../kapm_config/types';
+import { APMConfig, UploadInfo } from '../config/types';
 import { BaseInfoData, BusInfoDataType, ReportPayload, ReportAttachment, AnalyTypeEnum, CrashBranchEnum,
   ANALY_TYPE_NAME_MAP } from './uploadTypes';
 import { BuildCrashRecordParams, BuildAppFreezeRecordParams, BuildReportPayloadArgs } from './reportTypes';

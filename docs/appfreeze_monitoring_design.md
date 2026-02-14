@@ -875,7 +875,7 @@ interface FreezeReport {
 **3. 与系统 HiAppEvent 结合**
 
 ```typescript
-// apm/src/main/ets/kapm/services/AppMonitorService.ets
+// apm/src/main/ets/apm/services/AppMonitorService.ets
 export class AppMonitorService {
   private freezeIdMap: Map<string, FreezeReport> = new Map();
 

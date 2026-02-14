@@ -9,8 +9,8 @@ import {
   withLock,
   withLockSync,
   Resource
-} from '../../../main/ets/kapm/utils';
-import { withTimingSync } from '../../../main/ets/kapm/utils/withTiming';
+} from '../../../main/ets/apm/utils';
+import { withTimingSync } from '../../../main/ets/apm/utils/withTiming';
 
 export default function withUtilsTest() {
   describe('WithUtilsTest', () => {

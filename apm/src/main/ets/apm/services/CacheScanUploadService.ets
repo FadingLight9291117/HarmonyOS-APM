@@ -2,13 +2,13 @@ import { getLogger } from '../utils';
 import { getFileSystem } from '../platform/FileSystem';
 import { CacheService } from './CacheService';
 import { ReportService } from './ReportService';
-import { EventWithFiles } from '../kapm_cache/use/types';
+import { EventWithFiles } from '../cache/use/types';
 import { CrashBranchEnum, ReportAttachment } from '../types/uploadTypes';
 import { ReportPayloadBuilder } from '../types/reportPayloadBuilders';
-import { EventInfoParams, CachedFileMeta } from '../kapm_cache/save/types';
-import { APMConfig, UploadInfo } from '../kapm_config/types';
-import { EventType } from '../kapm_data_collection/event/EventChannel';
-import { APMCore } from '../kapm_core/APMCore';
+import { EventInfoParams, CachedFileMeta } from '../cache/save/types';
+import { APMConfig, UploadInfo } from '../config/types';
+import { EventType } from '../data_collection/event/EventChannel';
+import { APMCore } from '../core/APMCore';
 
 interface ScanUploadError {
   eventDir: string;

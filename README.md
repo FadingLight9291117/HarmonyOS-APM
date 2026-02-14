@@ -15,16 +15,16 @@ HarmonyOS 应用性能监控（Application Performance Monitoring）SDK，基于
 ```
 apm/                        # 核心 SDK 库 (HSP)
   Index.ets                 # 公开 API: ApmStarter, APMConfig, APMConfigBuilder
-  src/main/ets/kapm/
+  src/main/ets/apm/
     ApmStarter.ets          # SDK 入口
-    kapm_core/              # 核心单例，编排所有服务
-    kapm_config/            # 配置类型、默认值、Builder、Manager
+    core/                   # 核心单例，编排所有服务
+    config/                 # 配置类型、默认值、Builder、Manager
     services/               # Token、Network、Report、Cache 等服务
     utils/                  # 函数式工具 (withRetry, withLock, withTimeout 等)
     types/                  # 上报/网络/上传类型定义
     platform/               # 平台抽象 (FileSystem, Crypto, NetworkClient, Compression)
-    kapm_cache/             # 缓存 save/scan/clean/use
-    kapm_data_collection/   # 事件监控 (EventChannel, AppMonitor, NativeCrash)
+    cache/                  # 缓存 save/scan/clean/use
+    data_collection/        # 事件监控 (EventChannel, AppMonitor, NativeCrash)
   src/main/cpp/             # Native C++ 崩溃处理器 (NAPI)
 entry/                      # Demo 应用 (HAP)
 native_error_demo/          # 崩溃模拟器 (HSP)

@@ -1,7 +1,7 @@
 import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
 import {
   withLongTask, stopLongTask
-} from '../../../main/ets/kapm/utils';
+} from '../../../main/ets/apm/utils';
 
 // @Concurrent 函数用于 withLongTask 测试
 @Concurrent
