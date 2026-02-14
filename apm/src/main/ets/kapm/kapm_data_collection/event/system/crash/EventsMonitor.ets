@@ -10,7 +10,7 @@ export class EventsMonitor extends SystemEventMonitor {
   private log = getLogger('CrashMonitor')
 
   watcherName(): string {
-    return "wps_app_events_watcher"
+    return "apm_app_events_watcher"
   }
 
   eventFilters(): string[] {

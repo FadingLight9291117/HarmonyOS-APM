@@ -25,7 +25,7 @@ const DEFAULT_CONFIG: APMConfig = {
 
   // 应用信息（平铺字段）
   appVersion: '1.0.0',
-  appType: 'wps-ohos-mobile',
+  appType: '<YOUR_APP_TYPE>',
   channel: '1.0.0'
 };
 
@@ -52,7 +52,7 @@ const TEST_CONFIG: APMConfig = {
 
   // 应用信息（平铺字段）
   appVersion: '1.0.0',
-  appType: 'wps-ohos-mobile',
+  appType: '<YOUR_APP_TYPE>',
   channel: '1.0.0'
 };
 

@@ -6,7 +6,7 @@ export interface BaseInfoData {
   _did?: string;      // Device unique ID (可能在 crash 极端场景缺失
   _av: string;        // Client version
   _ch?: string;       // Client channel
-  _at: string;        // Client type (app_type)，如 wps-ohos-mobile
+  _at: string;        // Client type (app_type)，如 ohos-mobile
   _sv: string;        // APM SDK version (e.g. 1.0.0)
   _ut: number;        // Upload (build) timestamp, milliseconds
   _appid: string;     // Application ID
