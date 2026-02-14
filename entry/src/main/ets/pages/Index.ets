@@ -14,6 +14,7 @@ import {
   crashStackFault,
   crashBadSyscall
 } from 'native_error_demo';
+import { router } from '@kit.ArkUI';
 
 @Entry
 @Component
@@ -27,50 +28,50 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .margin({ top: 20, bottom: 10 })
 
-      // // 页面导航区域
-      // Text('页面跳转测试')
-      //   .fontSize(16)
-      //   .fontColor('#666')
-      //   .width('100%')
-      //   .padding({ left: 16, top: 10 })
-      //
-      // Row({ space: 10 }) {
-      //   Button('详情页')
-      //     .width('30%')
-      //     .backgroundColor('#007DFF')
-      //     .onClick(() => {
-      //       router.pushUrl({
-      //         url: 'pages/DetailPage',
-      //         params: {
-      //           message: '来自首页的消息'
-      //         }
-      //       });
-      //     })
-      //
-      //   Button('设置页')
-      //     .width('30%')
-      //     .backgroundColor('#36D1DC')
-      //     .onClick(() => {
-      //       router.pushUrl({
-      //         url: 'pages/SettingsPage',
-      //         params: {
-      //           from: 'Index'
-      //         }
-      //       });
-      //     })
-      //
-      //   Button('个人中心')
-      //     .width('30%')
-      //     .backgroundColor('#5CB3FF')
-      //     .onClick(() => {
-      //       router.pushUrl({
-      //         url: 'pages/ProfilePage'
-      //       });
-      //     })
-      // }
-      // .width('90%')
-      // .justifyContent(FlexAlign.SpaceEvenly)
-      // .margin({ top: 10, bottom: 20 })
+      // 页面导航区域
+      Text('页面跳转测试')
+        .fontSize(16)
+        .fontColor('#666')
+        .width('100%')
+        .padding({ left: 16, top: 10 })
+
+      Row({ space: 10 }) {
+        Button('详情页')
+          .width('30%')
+          .backgroundColor('#007DFF')
+          .onClick(() => {
+            router.pushUrl({
+              url: 'pages/DetailPage',
+              params: {
+                message: '来自首页的消息'
+              }
+            });
+          })
+
+        Button('设置页')
+          .width('30%')
+          .backgroundColor('#36D1DC')
+          .onClick(() => {
+            router.pushUrl({
+              url: 'pages/SettingsPage',
+              params: {
+                from: 'Index'
+              }
+            });
+          })
+
+        Button('个人中心')
+          .width('30%')
+          .backgroundColor('#5CB3FF')
+          .onClick(() => {
+            router.pushUrl({
+              url: 'pages/ProfilePage'
+            });
+          })
+      }
+      .width('90%')
+      .justifyContent(FlexAlign.SpaceEvenly)
+      .margin({ top: 10, bottom: 20 })
 
       Scroll() {
         Column({ space: 10 }) {

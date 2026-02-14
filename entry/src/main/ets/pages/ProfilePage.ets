@@ -6,6 +6,10 @@ struct ProfilePage {
   @State userName: string = 'OpenHarmony User';
   @State userEmail: string = 'user@example.com';
 
+  aboutToAppear(): void {
+    throw Error('test JsError in aboutToAppear');
+  }
+
   build() {
     Column() {
       Text('个人中心')
