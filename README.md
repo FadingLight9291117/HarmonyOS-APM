@@ -37,15 +37,7 @@ docs/                       # 架构设计文档
 - DevEco Studio 5.x+
 - OHPM (OpenHarmony Package Manager)
 
-## 快速开始
-
-### 安装依赖
-
-```bash
-ohpm install
-```
-
-### 接入 SDK
+## 接入 SDK
 
 在 `EntryAbility` 的 `onCreate` 中初始化：
 
@@ -69,109 +61,15 @@ export default class EntryAbility extends UIAbility {
 }
 ```
 
-### APMConfigBuilder API
 
-| 方法 | 说明 | 必填 |
-|------|------|------|
-| `setAppVersion(version)` | 应用版本 | 是 |
-| `setAppType(type)` | 客户端类型 | 是 |
-| `setChannel(channel)` | 渠道 | 是 |
-| `setKeys(keyHex, iv)` | AES 加密密钥和 IV | 否 |
-| `setDebug(isDebug)` | 调试模式 | 否 |
-| `setProductName(name)` | 产品名称 | 否 |
-| `setBuildId(id)` | 构建 ID | 否 |
-| `setDeviceId(id)` | 设备 ID | 否 |
-| `setBranchName(name)` | Git 分支 | 否 |
-| `setCommitRevision(rev)` | Git 提交版本 | 否 |
-| `setKernelVersion(ver)` | 内核版本 | 否 |
-| `setBundleName(name)` | 包名 | 否 |
-| `setLogBackend(backend)` | 自定义日志后端 | 否 |
-| `setExtraInfo(info)` | 自定义扩展字段 | 否 |
-| `setUserIdFunc(func)` | 动态获取用户 ID（仅主线程有效，不跨 Worker 边界） | 否 |
+## 几个有意思的设计点
 
-## 构建
-
-```bash
-hvigorw assembleHap       # 构建 Demo 应用 (HAP)
-hvigorw assembleHsp       # 构建 SDK 共享包 (HSP)
-hvigorw clean             # 清理构建产物
-```
-
-## 测试
-
-测试框架：`@ohos/hypium` + `@ohos/hamock`
-
-```bash
-# 单元测试
-hvigorw --mode module -p module=apm@default test
-
-# 设备测试
-hvigorw --mode module -p module=apm@default ohosTest
-```
-
-运行单个测试：在对应模块的 `List.test.ets` 中仅导入目标测试文件，或在测试文件中使用 `describe.only` / `it.only`。
-
-## 代码检查
-
-```bash
-hvigorw lint
-```
-
-规则集：`@performance/recommended`、`@typescript-eslint/recommended`，以及全部 `@security/no-unsafe-*` 安全规则（均为 error 级别）。
-
-## 技术架构
-
-### 双线程初始化
-
-SDK 启动时在两个线程上独立完成初始化，这是最重要的架构事实：
-
-```
-主线程 (Main Thread)
-  └─ APMCore.init()
-       ├─ startCacheServices()   # 缓存清理 / 离线补传
-       ├─ startNetConService()   # 网络恢复监听
-       └─ JS 错误捕获            # errorManager.on('globalErrorOccurred' / 'globalUnhandledRejectionDetected')
-
-Worker 线程 (@Concurrent via taskpool)
-  └─ APMCore.init()              # 独立的第二个单例
-       └─ startMonitorServices() # AppFreeze + Native Crash 监控
-```
-
-因为 `taskpool` Worker 不共享堆，**每个线程各自持有一个独立的 `APMCore` 单例**。跨线程的 config 参数会先经过 `filterConfig()` 过滤，移除无法序列化的函数类型字段（如 `setUserIdFunc` 配置的回调），因此该回调只在主线程侧生效。
-
-### Native Crash 处理流程
-
-```
-信号触发 (SIGSEGV等)
-  → C++ 信号处理器捕获
-  → Crash Delayer (sigsuspend 挂起进程)
-  → HiAppEvent IPC 回调通知 ArkTS 层
-  → ArkTS 落盘 + 上报
-  → SIGUSR2 通知 C++ 层处理完成
-  → 进程退出（3s 超时保护）
-```
-
-### 上报管线与离线兜底
-
-所有错误**总是先落盘**，上传失败（无论是断网还是服务端异常）不会丢数据。网络恢复时，`CacheScanUploadService` 自动扫描磁盘缓存补传，上传失败按指数退避重试。
-
-```
-事件采集
-  → 文件落盘（CacheService）
-  → AES-256-CBC 加密 + GZIP 压缩（EncryptCompressService）
-  → ZIP 打包
-  → Token 鉴权
-  → 上传（支持分片，失败指数退避重试）
-      ↑
-      └─ 网络恢复时，CacheScanUploadService 自动补传历史缓存
-```
+1. 双线程初始化：主线程跑缓存清理/上传/网络监听/JS 错误捕获；worker 线程（@Concurrent）跑 AppFreeze + 原生崩溃监控。因为 taskpool worker 不共享堆，所以每个线程各自构造一个 APMCore 单例。
+2. 崩溃延迟器（Crash Delayer）：原生崩溃最难处理——进程都要挂了怎么还能上报？它在信号处理器里用 sigsuspend 把进程"吊住"，等 ArkTS 层把崩溃数据存盘/上传完，再用 SIGUSR2 通知放行，3 秒超时兜底。
+3. 离线兜底：错误总是先落盘，没网时上传失败也没关系，等网络恢复时由扫描服务（CacheScanUploadService）自动补传。
 
 ## 文档
 
 - [崩溃处理架构设计](docs/apm_crash_handling_architecture.md)
 - [AppFreeze 监控设计](docs/appfreeze_monitoring_design.md)
 - [Native Crash 信号映射表](docs/native_crash_signal_mapping.md)
-
-## 许可证
-
-Apache-2.0
