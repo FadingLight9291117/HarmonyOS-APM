@@ -8,7 +8,7 @@ HarmonyOS 应用性能监控（Application Performance Monitoring）SDK，基于
 - **JS Error 监控** — 通过 `errorManager` 全局捕获未处理异常和 Promise 拒绝，自动落盘并上报
 - **AppFreeze 检测** — 监听系统 `APP_FREEZE` 事件，检测主线程卡顿（5s 阈值）
 - **缓存与上报管线** — 文件落盘 → AES 加密 → GZIP 压缩 → ZIP 打包 → Token 鉴权上传，支持断网缓存、网络恢复自动补传、指数退避重试
-- **零三方依赖** — 核心代码 < 500 行 C++，纯系统 API 实现
+- **零三方依赖** — 纯系统 API 实现，无第三方运行时依赖
 
 ## 项目结构
 
@@ -87,7 +87,7 @@ export default class EntryAbility extends UIAbility {
 | `setBundleName(name)` | 包名 | 否 |
 | `setLogBackend(backend)` | 自定义日志后端 | 否 |
 | `setExtraInfo(info)` | 自定义扩展字段 | 否 |
-| `setUserIdFunc(func)` | 动态获取用户 ID | 否 |
+| `setUserIdFunc(func)` | 动态获取用户 ID（仅主线程有效，不跨 Worker 边界） | 否 |
 
 ## 构建
 
@@ -121,6 +121,24 @@ hvigorw lint
 
 ## 技术架构
 
+### 双线程初始化
+
+SDK 启动时在两个线程上独立完成初始化，这是最重要的架构事实：
+
+```
+主线程 (Main Thread)
+  └─ APMCore.init()
+       ├─ startCacheServices()   # 缓存清理 / 离线补传
+       ├─ startNetConService()   # 网络恢复监听
+       └─ JS 错误捕获            # errorManager.on('globalErrorOccurred' / 'globalUnhandledRejectionDetected')
+
+Worker 线程 (@Concurrent via taskpool)
+  └─ APMCore.init()              # 独立的第二个单例
+       └─ startMonitorServices() # AppFreeze + Native Crash 监控
+```
+
+因为 `taskpool` Worker 不共享堆，**每个线程各自持有一个独立的 `APMCore` 单例**。跨线程的 config 参数会先经过 `filterConfig()` 过滤，移除无法序列化的函数类型字段（如 `setUserIdFunc` 配置的回调），因此该回调只在主线程侧生效。
+
 ### Native Crash 处理流程
 
 ```
@@ -133,11 +151,19 @@ hvigorw lint
   → 进程退出（3s 超时保护）
 ```
 
-### 上报管线
+### 上报管线与离线兜底
+
+所有错误**总是先落盘**，上传失败（无论是断网还是服务端异常）不会丢数据。网络恢复时，`CacheScanUploadService` 自动扫描磁盘缓存补传，上传失败按指数退避重试。
 
 ```
-事件采集 → 文件落盘 → AES-256-CBC 加密 → GZIP 压缩 → ZIP 打包
-  → Token 鉴权 → 上传（支持分片）→ 失败重试/断网缓存 → 网络恢复补传
+事件采集
+  → 文件落盘（CacheService）
+  → AES-256-CBC 加密 + GZIP 压缩（EncryptCompressService）
+  → ZIP 打包
+  → Token 鉴权
+  → 上传（支持分片，失败指数退避重试）
+      ↑
+      └─ 网络恢复时，CacheScanUploadService 自动补传历史缓存
 ```
 
 ## 文档
@@ -145,7 +171,6 @@ hvigorw lint
 - [崩溃处理架构设计](docs/apm_crash_handling_architecture.md)
 - [AppFreeze 监控设计](docs/appfreeze_monitoring_design.md)
 - [Native Crash 信号映射表](docs/native_crash_signal_mapping.md)
-- [开发计划](docs/development_plan.md)
 
 ## 许可证
 
